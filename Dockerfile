@@ -1,5 +1,5 @@
 ### build stage ###
-FROM alpine:edge as builder
+FROM alpine:edge AS builder
 
 ENV NGINX_VERSION=1.29.0
 
