@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -36,3 +40,4 @@ jobs:
           tags: |
             tigersmile/nginx-micro:latest
             ghcr.io/${{ github.repository_owner }}/nginx-micro:latest
+
