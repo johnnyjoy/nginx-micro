@@ -1,0 +1,33 @@
+# Don't send build scripts, docs, or unnecessary files to the build context
+
+# Ignore Git and VCS files
+.git
+.gitignore
+*.swp
+*.swo
+
+# Ignore local OS metadata
+.DS_Store
+Thumbs.db
+
+# Ignore binaries, build outputs, and cache
+bin/
+*.pyc
+*.o
+*.a
+*.so
+*.exe
+*.out
+
+# Ignore CI/CD artifacts
+*.log
+*.tmp
+*.bak
+
+# Ignore everything except what's needed
+README.md
+docker-bake.hcl
+Dockerfile
+
+# Don't ignore conf/ or your Dockerfile!
+# The minimal build needs Dockerfile and conf/

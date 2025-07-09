@@ -1,7 +1,7 @@
 ### build stage ###
 FROM alpine:edge AS builder
 
-ENV NGINX_VERSION=1.29.0
+ARG NGINX_VERSION=1.29.0
 
 RUN echo 'http://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories && \
 	apk add --no-cache \
