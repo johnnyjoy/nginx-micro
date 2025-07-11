@@ -141,7 +141,12 @@ WORKDIR /build/nginx
 
 RUN ./configure \
     --sbin-path=/nginx \
+    --pid-path="/tmp/nginx.pid" \
+    --lock-path="/tmp/nginx.lock" \
+    --error-log-path="/dev/stdout" \
+    --http-log-path="/dev/stdout" \
     --conf-path=/conf/nginx.conf \
+    --prefix="/" \
     --with-cc-opt="$CFLAGS" \
     --with-ld-opt="$LDFLAGS" \
     --with-pcre \
@@ -187,7 +192,12 @@ WORKDIR /build/nginx
 
 RUN ./configure \
     --sbin-path=/nginx \
+    --pid-path="/tmp/nginx.pid" \
+    --lock-path="/tmp/nginx.lock" \
+    --error-log-path="/dev/stdout" \
+    --http-log-path="/dev/stdout" \
     --conf-path=/conf/nginx.conf \
+    --prefix="/" \
     --with-cc-opt="$CFLAGS" \
     --with-ld-opt="$LDFLAGS" \
     --with-pcre \
@@ -234,7 +244,12 @@ WORKDIR /build/nginx
 
 RUN ./configure \
     --sbin-path=/nginx \
+    --pid-path="/tmp/nginx.pid" \
+    --lock-path="/tmp/nginx.lock" \
+    --error-log-path="/dev/stdout" \
+    --http-log-path="/dev/stdout" \
     --conf-path=/conf/nginx.conf \
+    --prefix="/" \
     --with-cc-opt="$CFLAGS" \
     --with-ld-opt="$LDFLAGS" \
     --with-pcre \
@@ -286,8 +301,6 @@ COPY --from=build-deps /nginx.passwd /etc/passwd
 COPY --from=build-deps /nginx.group /etc/group
 
 COPY conf /conf
-
-USER 101:101
 
 EXPOSE 80
 CMD ["/nginx", "-g", "daemon off;"]
