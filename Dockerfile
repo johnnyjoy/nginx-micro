@@ -96,38 +96,46 @@ RUN case "$TARGETPLATFORM" in \
     esac && \
     echo "Configuring for $CONF" && \
     ./Configure ${CONF} \
-        --prefix=/usr \
-        no-cms \
-        no-md2 \
-        no-md4 \
-        no-sm2 \
-        no-sm3 \
-        no-sm4 \
-        no-rc2 \
-        no-rc4 \
-        no-idea \
-        no-aria \
-        no-camellia \
-        no-whirlpool \
-        no-rmd160 \
-        no-poly1305 \
-        no-chacha \
-        no-shared \
-        no-tests \
-        no-ssl3 \
-        no-ssl3-method \
-        no-weak-ssl-ciphers \
-        no-comp \
-        no-zlib \
-        no-dynamic-engine \
-        no-engine \
-        no-dso \
-        no-asm \
-        no-async \
-        no-filenames \
-        no-docs \
-        no-deprecated \
-        no-apps && \
+      --prefix=/usr \
+      no-ssl2 \
+      no-ssl3 \
+      no-ssl3-method \
+      no-zlib \
+      no-comp \
+      no-shared \
+      no-dso \
+      no-engine \
+      no-dynamic-engine \
+      no-hw \
+      no-async \
+      no-tests \
+      no-apps \
+      no-cms \
+      no-md2 \
+      no-md4 \
+      no-mdc2 \
+      no-rmd160 \
+      no-whirlpool \
+      no-idea \
+      no-aria \
+      no-camellia \
+      no-rc2 \
+      no-rc4 \
+      no-seed \
+      no-bf \
+      no-cast \
+      no-des \
+      no-sm2 \
+      no-sm3 \
+      no-sm4 \
+      no-ec2m \
+      no-srp \
+      no-psk \
+      no-weak-ssl-ciphers \
+      no-err \
+      no-docs \
+      no-deprecated \
+      --openssldir=/ssl && \
     make install_sw
 
 ################################################################################
@@ -258,6 +266,8 @@ RUN ./configure \
     --with-http_ssl_module \
     --with-http_gunzip_module \
     --with-http_gzip_static_module \
+    --with-http_v2_module \
+    --with-http_v3_module \
     --without-select_module \
     --without-poll_module \
     --without-http_charset_module \

@@ -1,0 +1,37 @@
+#!/bin/sh
+set -eu
+
+# Set your version here, or pass VERSION=... in env.
+VERSION="${VERSION:-1.29.0}"
+
+# List of build targets and their short tag (if any)
+VARIANTS="
+micro:
+micro-upx:upx
+gzip:gzip
+gzip-upx:gzip-upx
+ssl:ssl
+ssl-upx:ssl-upx
+"
+
+for line in $VARIANTS; do
+    # Parse "target:shorttag"
+    tgt=$(echo "$line" | cut -d: -f1)
+    alias=$(echo "$line" | cut -s -d: -f2)
+
+    echo "==> Building target $tgt"
+
+    # Build versioned tag (always)
+    docker build --target "$tgt" -t "nginx-micro:${VERSION}${alias:+-$alias}" .
+
+    # Build alias tag (if present)
+    if [ -n "$alias" ]; then
+        docker tag "nginx-micro:${VERSION}-$alias" "nginx-micro:$alias"
+    else
+        docker tag "nginx-micro:${VERSION}" "nginx-micro:latest"
+    fi
+done
+
+echo
+echo "==> Build complete. Tagged images:"
+docker images | grep ^nginx-micro
