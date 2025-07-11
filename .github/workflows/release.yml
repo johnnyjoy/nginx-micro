@@ -1,0 +1,51 @@
+name: Release (build & push on tag)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"     # Only runs on version tags like v1.29.0
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  bake-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version/tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF##*/}
+          echo "TAG=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Bake and push all images
+        uses: docker/bake-action@v4
+        with:
+          targets: default
+          files: docker-bake.hcl
+          push: true
+          set: |
+            nginx-micro.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
+            nginx-micro-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
+            nginx-gzip.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
+            nginx-gzip-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
+            nginx-ssl.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
+            nginx-ssl-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
