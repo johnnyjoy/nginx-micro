@@ -117,7 +117,6 @@ RUN case "$TARGETPLATFORM" in \
         no-rmd160 \
         no-shared \
         no-tests \
-        no-ssl2 \
         no-ssl3 \
         no-ssl3-method \
         no-srp \
