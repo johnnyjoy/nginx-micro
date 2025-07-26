@@ -5,7 +5,7 @@
 ################################################################################
 
 ARG NGINX_VERSION=1.29.0
-ARG OPENSSL_VERSION=3.5.0
+ARG OPENSSL_VERSION=3.5.1
 
 ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fvisibility=hidden -fuse-linker-plugin -Wimplicit -Os -s -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -static -Wno-cast-function-type -Wno-implicit-function-declaration"
 ARG LDFLAGS="-flto -fuse-linker-plugin -static -s -Wl,--gc-sections"
@@ -23,7 +23,7 @@ RUN apk add --no-cache wget tar gnupg
 WORKDIR /build
 
 # OpenSSL
-ARG OPENSSL_CHECKSUM="344d0a79f1a9b08029b0744e2cc401a43f9c90acd1044d09a530b4885a8e9fc0"
+ARG OPENSSL_CHECKSUM="529043b15cffa5f36077a4d0af83f3de399807181d607441d734196d889b641f"
 RUN wget -O openssl.tar.gz "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz" && \
     echo "${OPENSSL_CHECKSUM} openssl.tar.gz" | sha256sum -c - && \
     mkdir openssl && \
@@ -185,6 +185,7 @@ RUN ./configure \
     --without-http_upstream_zone_module && \
     make && \
     cp objs/nginx /nginx && \
+    strip --strip-all /nginx && \
     upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
 
 ################################################################################
@@ -237,6 +238,7 @@ RUN ./configure \
     --without-http_upstream_zone_module && \
     make && \
     cp objs/nginx /nginx && \
+    strip --strip-all /nginx && \
     upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
 
 ################################################################################
@@ -292,6 +294,7 @@ RUN ./configure \
     --without-http_upstream_zone_module && \
     make && \
     cp objs/nginx /nginx && \
+    strip --strip-all /nginx && \
     upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
 
 ################################################################################
