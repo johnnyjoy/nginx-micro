@@ -4,8 +4,8 @@
 # GLOBAL BUILD ARGS
 ################################################################################
 
-ARG NGINX_VERSION=1.29.0
-ARG OPENSSL_VERSION=3.5.1
+ARG NGINX_VERSION=1.29.2
+ARG OPENSSL_VERSION=3.6.0
 
 ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fvisibility=hidden -fuse-linker-plugin -Wimplicit -Os -s -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -static -Wno-cast-function-type -Wno-implicit-function-declaration"
 ARG LDFLAGS="-flto -fuse-linker-plugin -static -s -Wl,--gc-sections"
@@ -23,7 +23,7 @@ RUN apk add --no-cache wget tar gnupg
 WORKDIR /build
 
 # OpenSSL
-ARG OPENSSL_CHECKSUM="529043b15cffa5f36077a4d0af83f3de399807181d607441d734196d889b641f"
+ARG OPENSSL_CHECKSUM="b6a5f44b7eb69e3fa35dbf15524405b44837a481d43d81daddde3ff21fcbb8e9"
 RUN wget -O openssl.tar.gz "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz" && \
     echo "${OPENSSL_CHECKSUM} openssl.tar.gz" | sha256sum -c - && \
     mkdir openssl && \
@@ -280,7 +280,6 @@ RUN ./configure \
     --without-http_userid_module \
     --without-http_empty_gif_module \
     --without-http_referer_module \
-    --without-http_proxy_module \
     --without-http_uwsgi_module \
     --without-http_scgi_module \
     --without-http_ssi_module \

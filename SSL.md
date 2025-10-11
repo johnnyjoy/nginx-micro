@@ -65,7 +65,7 @@ docker run --rm -p 8443:443 \
   -v $(pwd)/nginx.crt:/conf/nginx.crt:ro \
   -v $(pwd)/nginx.key:/conf/nginx.key:ro \
   -v $(pwd)/www:/www:ro \
-  tigersmile/nginx-micro:1.29.0-ssl-upx
+  tigersmile/nginx-micro:1.29.2-ssl-upx
 ```
 
 * The container listens on port 443 (exposed as 8443 on your host)
