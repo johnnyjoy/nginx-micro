@@ -32,7 +32,9 @@ jobs:
 
       - name: Extract version/tag
         id: version
-        run: echo "TAG=${GITHUB_REF##*/}" | sed 's/^v//' | tee -a $GITHUB_OUTPUT
+        run: |
+          TAG=${GITHUB_REF##*/}
+          echo "TAG=${TAG#v}" >> $GITHUB_OUTPUT
 
       - name: Bake and push all images
         uses: docker/bake-action@v5
