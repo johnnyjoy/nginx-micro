@@ -268,6 +268,7 @@ RUN ./configure \
     --with-http_gzip_static_module \
     --with-http_v2_module \
     --with-http_v3_module \
+    --with-http_auth_request_module \
     --without-select_module \
     --without-poll_module \
     --without-http_charset_module \
