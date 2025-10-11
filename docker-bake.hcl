@@ -64,7 +64,7 @@ target "nginx-micro" {
   args = {
     "NGINX_VERSION" = "${NGINX_VERSION}"
   }
-  platforms = ${ALL_PLATFORMS}
+  platforms = "${ALL_PLATFORMS}"
 }
 
 target "nginx-micro-upx" {
@@ -92,7 +92,7 @@ target "nginx-micro-upx" {
   args = {
     "NGINX_VERSION" = "${NGINX_VERSION}"
   }
-  platforms = ${UPX_PLATFORMS}
+  platforms = "${UPX_PLATFORMS}"
 }
 
 target "nginx-gzip" {
@@ -120,7 +120,7 @@ target "nginx-gzip" {
   args = {
     "NGINX_VERSION" = "${NGINX_VERSION}"
   }
-  platforms = ${ALL_PLATFORMS}
+  platforms = "${ALL_PLATFORMS}"
 }
 
 target "nginx-gzip-upx" {
@@ -148,7 +148,7 @@ target "nginx-gzip-upx" {
   args = {
     "NGINX_VERSION" = "${NGINX_VERSION}"
   }
-  platforms = ${UPX_PLATFORMS}
+  platforms = "${UPX_PLATFORMS}"
 }
 
 target "nginx-ssl" {
@@ -176,7 +176,7 @@ target "nginx-ssl" {
   args = {
     "NGINX_VERSION" = "${NGINX_VERSION}"
   }
-  platforms = ${ALL_PLATFORMS}
+  platforms = "${ALL_PLATFORMS}"
 }
 
 target "nginx-ssl-upx" {
@@ -204,5 +204,5 @@ target "nginx-ssl-upx" {
   args = {
     "NGINX_VERSION" = "${NGINX_VERSION}"
   }
-  platforms = ${UPX_PLATFORMS}
+  platforms = "${UPX_PLATFORMS}"
 }
