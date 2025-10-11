@@ -271,7 +271,6 @@ RUN ./configure \
     --without-select_module \
     --without-poll_module \
     --without-http_charset_module \
-    --without-http_auth_basic_module \
     --without-http_browser_module \
     --without-http_map_module \
     --without-http_autoindex_module \
