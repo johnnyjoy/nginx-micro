@@ -4,7 +4,7 @@
 # GLOBAL BUILD ARGS
 ################################################################################
 
-ARG NGINX_VERSION=1.29.2
+ARG NGINX_VERSION=1.29.3
 ARG OPENSSL_VERSION=3.6.0
 
 ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fvisibility=hidden -fuse-linker-plugin -Wimplicit -Os -s -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -static -Wno-cast-function-type -Wno-implicit-function-declaration"
@@ -35,14 +35,21 @@ WORKDIR /build
 RUN set -eux; \
     wget -O nginx.tar.gz "https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz" && \
     wget -O nginx.tar.gz.asc "https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz.asc" && \
-    wget -O /tmp/nginx_signing.key https://nginx.org/keys/nginx_signing.key && \
-    gpg --import /tmp/nginx_signing.key && \
-    gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys D6786CE303D9A9022998DC6CC8464D549AF75C0A && \
-    gpg --batch --verify nginx.tar.gz.asc nginx.tar.gz && \
+    export GNUPGHOME="$(mktemp -d)"; \
+    # Fetch the official PGP-keys page and import *all* .key files it references
+    wget -qO- https://nginx.org/en/pgp_keys.html \
+      | grep -Eo 'href="(/keys/[A-Za-z0-9._-]+\.key)"' \
+      | sed -E 's/^href="(.*)"/\1/' \
+      | sort -u \
+      | while read -r path; do \
+          wget -qO- "https://nginx.org${path}" | gpg --import; \
+        done; \
+    # Verify signature (fails the build if invalid/unknown)
+    gpg --batch --verify nginx.tar.gz.asc nginx.tar.gz; \
+    # Unpack
     mkdir nginx && \
     tar tvfz nginx.tar.gz && \
     tar xvzf nginx.tar.gz -C nginx --strip-components=1
-
 
 ################################################################################
 # BUILD DEPS: all static, pcre2, zlib, upx (for optional)
