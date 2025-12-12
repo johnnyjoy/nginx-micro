@@ -30,12 +30,12 @@ Multiple image variants are published for different use cases.
 
 | Tag                | Features                       | SSL/TLS | gzip | UPX-compressed | Platforms<sup>†</sup>                        | Typical Use              |
 | ------------------ | ------------------------------ | :-----: | :--: | :------------: | :------------------------------------------- | ------------------------ |
-| `:1.29.3`          | Minimal HTTP, FastCGI          |    ❌    |   ❌  |        ❌       | All supported                                | Most minimal HTTP only   |
-| `:1.29.3-upx`      | Same as above (smaller binary) |    ❌    |   ❌  |        ✅       | `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` | Smallest HTTP only       |
-| `:1.29.3-gzip`     | HTTP, FastCGI, gzip (encoding) |    ❌    |   ✅  |        ❌       | All supported                                | gzip-compress HTTP       |
-| `:1.29.3-gzip-upx` | gzip, UPX-compressed           |    ❌    |   ✅  |        ✅       | UPX platforms (see above)                    | Smallest with gzip       |
-| `:1.29.3-ssl`      | HTTP, FastCGI, SSL/TLS, gzip   |    ✅    |   ✅  |        ❌       | All supported                                | HTTPS support            |
-| `:1.29.3-ssl-upx`  | SSL/TLS, gzip, UPX-compressed  |    ✅    |   ✅  |        ✅       | UPX platforms (see above)                    | HTTPS, smallest with SSL |
+| `:1.29.4`          | Minimal HTTP, FastCGI          |    ❌    |   ❌  |        ❌       | All supported                                | Most minimal HTTP only   |
+| `:1.29.4-upx`      | Same as above (smaller binary) |    ❌    |   ❌  |        ✅       | `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` | Smallest HTTP only       |
+| `:1.29.4-gzip`     | HTTP, FastCGI, gzip (encoding) |    ❌    |   ✅  |        ❌       | All supported                                | gzip-compress HTTP       |
+| `:1.29.4-gzip-upx` | gzip, UPX-compressed           |    ❌    |   ✅  |        ✅       | UPX platforms (see above)                    | Smallest with gzip       |
+| `:1.29.4-ssl`      | HTTP, FastCGI, SSL/TLS, gzip   |    ✅    |   ✅  |        ❌       | All supported                                | HTTPS support            |
+| `:1.29.4-ssl-upx`  | SSL/TLS, gzip, UPX-compressed  |    ✅    |   ✅  |        ✅       | UPX platforms (see above)                    | HTTPS, smallest with SSL |
 
 <sup>†</sup> UPX-compressed images (`-upx` tags) are **not** built for `s390x` or `riscv64`, since UPX does not support them on Alpine.
 
@@ -43,7 +43,7 @@ Multiple image variants are published for different use cases.
 
 ## 📦 How Does the Size Compare?
 
-| Platform | Official nginx:1.29 | nginx-micro:1.29.3-upx | nginx-micro:1.29.3 |
+| Platform | Official nginx:1.29 | nginx-micro:1.29.4-upx | nginx-micro:1.29.4 |
 | -------- | :-----------------: | :--------------------: | :----------------: |
 | amd64    |       68.86 MB      |       **432 KB**       |       1.19 MB      |
 | arm64    |       65.54 MB      |       **423 KB**       |       1.17 MB      |
@@ -184,12 +184,12 @@ http {
 
 | Tag                | gzip | SSL/TLS | UPX | Description                  | Platforms     |
 | ------------------ | :--: | :-----: | :-: | ---------------------------- | ------------- |
-| `:1.29.3`          |   ❌  |    ❌    |  ❌  | Minimal HTTP only            | all           |
-| `:1.29.3-upx`      |   ❌  |    ❌    |  ✅  | Minimal HTTP, smallest size  | upx platforms |
-| `:1.29.3-gzip`     |   ✅  |    ❌    |  ❌  | gzip content-encoding        | all           |
-| `:1.29.3-gzip-upx` |   ✅  |    ❌    |  ✅  | gzip, smallest size          | upx platforms |
-| `:1.29.3-ssl`      |   ✅  |    ✅    |  ❌  | SSL/TLS, gzip                | all           |
-| `:1.29.3-ssl-upx`  |   ✅  |    ✅    |  ✅  | SSL/TLS, gzip, smallest size | upx platforms |
+| `:1.29.4`          |   ❌  |    ❌    |  ❌  | Minimal HTTP only            | all           |
+| `:1.29.4-upx`      |   ❌  |    ❌    |  ✅  | Minimal HTTP, smallest size  | upx platforms |
+| `:1.29.4-gzip`     |   ✅  |    ❌    |  ❌  | gzip content-encoding        | all           |
+| `:1.29.4-gzip-upx` |   ✅  |    ❌    |  ✅  | gzip, smallest size          | upx platforms |
+| `:1.29.4-ssl`      |   ✅  |    ✅    |  ❌  | SSL/TLS, gzip                | all           |
+| `:1.29.4-ssl-upx`  |   ✅  |    ✅    |  ✅  | SSL/TLS, gzip, smallest size | upx platforms |
 
 **What’s a “UPX platform”?**
 Currently: `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` (but not `s390x` or `riscv64`).
