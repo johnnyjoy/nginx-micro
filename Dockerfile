@@ -4,8 +4,8 @@
 # GLOBAL BUILD ARGS
 ################################################################################
 
-ARG NGINX_VERSION=1.29.4
-ARG OPENSSL_VERSION=3.6.0
+ARG NGINX_VERSION=1.29.5
+ARG OPENSSL_VERSION=3.6.1
 
 ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fvisibility=hidden -fuse-linker-plugin -Wimplicit -Os -s -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -static -Wno-cast-function-type -Wno-implicit-function-declaration"
 ARG LDFLAGS="-flto -fuse-linker-plugin -static -s -Wl,--gc-sections"
@@ -23,7 +23,7 @@ RUN apk add --no-cache wget tar gnupg
 WORKDIR /build
 
 # OpenSSL
-ARG OPENSSL_CHECKSUM="b6a5f44b7eb69e3fa35dbf15524405b44837a481d43d81daddde3ff21fcbb8e9"
+ARG OPENSSL_CHECKSUM="b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e"
 RUN wget -O openssl.tar.gz "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz" && \
     echo "${OPENSSL_CHECKSUM} openssl.tar.gz" | sha256sum -c - && \
     mkdir openssl && \
