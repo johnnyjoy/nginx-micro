@@ -34,6 +34,8 @@ group "default" {
     "nginx-micro-upx",
     "nginx-gzip",
     "nginx-gzip-upx",
+    "nginx-ssi",
+    "nginx-ssi-upx",
     "nginx-ssl",
     "nginx-ssl-upx"
   ]
@@ -132,6 +134,62 @@ target "nginx-gzip-upx" {
     "tigersmile/nginx-micro:gzip-upx",
     "ghcr.io/johnnyjoy/nginx-micro:${NGINX_VERSION}-gzip-upx",
     "ghcr.io/johnnyjoy/nginx-micro:gzip-upx"
+  ]
+  cache-from = [
+    {
+      type = "registry",
+      ref = "tigersmile/nginx-micro-cache"
+    }
+  ]
+  cache-to = [
+    {
+      type = "registry",
+      ref = "tigersmile/nginx-micro-cache"
+    }
+  ]
+  args = {
+    "NGINX_VERSION" = "${NGINX_VERSION}"
+  }
+  platforms = "${UPX_PLATFORMS}"
+}
+
+target "nginx-ssi" {
+  context = "."
+  dockerfile = "Dockerfile"
+  target = "ssi"
+  tags = [
+    "tigersmile/nginx-micro:${NGINX_VERSION}-ssi",
+    "tigersmile/nginx-micro:ssi",
+    "ghcr.io/johnnyjoy/nginx-micro:${NGINX_VERSION}-ssi",
+    "ghcr.io/johnnyjoy/nginx-micro:ssi"
+  ]
+  cache-from = [
+    {
+      type = "registry",
+      ref = "tigersmile/nginx-micro-cache"
+    }
+  ]
+  cache-to = [
+    {
+      type = "registry",
+      ref = "tigersmile/nginx-micro-cache"
+    }
+  ]
+  args = {
+    "NGINX_VERSION" = "${NGINX_VERSION}"
+  }
+  platforms = "${ALL_PLATFORMS}"
+}
+
+target "nginx-ssi-upx" {
+  context = "."
+  dockerfile = "Dockerfile"
+  target = "ssi-upx"
+  tags = [
+    "tigersmile/nginx-micro:${NGINX_VERSION}-ssi-upx",
+    "tigersmile/nginx-micro:ssi-upx",
+    "ghcr.io/johnnyjoy/nginx-micro:${NGINX_VERSION}-ssi-upx",
+    "ghcr.io/johnnyjoy/nginx-micro:ssi-upx"
   ]
   cache-from = [
     {
