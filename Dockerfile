@@ -249,6 +249,58 @@ RUN ./configure \
     upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
 
 ################################################################################
+# BUILD NGINX SSI (includes gzip)
+################################################################################
+FROM build-deps AS build-ssi
+
+ARG NGINX_VERSION CFLAGS LDFLAGS
+
+WORKDIR /build/nginx
+
+RUN ./configure \
+    --sbin-path=/nginx \
+    --pid-path="/tmp/nginx.pid" \
+    --lock-path="/tmp/nginx.lock" \
+    --error-log-path="/dev/stdout" \
+    --http-log-path="/dev/stdout" \
+    --conf-path=/conf/nginx.conf \
+    --prefix="/" \
+    --with-cc-opt="$CFLAGS" \
+    --with-ld-opt="$LDFLAGS" \
+    --with-pcre \
+    --with-threads \
+    --with-file-aio \
+    --without-select_module \
+    --without-poll_module \
+    --with-http_gunzip_module \
+    --with-http_gzip_static_module \
+    --without-http_charset_module \
+    --without-http_auth_basic_module \
+    --without-http_browser_module \
+    --without-http_map_module \
+    --without-http_autoindex_module \
+    --without-http_geo_module \
+    --without-http_split_clients_module \
+    --without-http_userid_module \
+    --without-http_empty_gif_module \
+    --without-http_referer_module \
+    --without-http_proxy_module \
+    --without-http_uwsgi_module \
+    --without-http_scgi_module \
+    --without-http_memcached_module \
+    --without-http_mirror_module \
+    --without-http_upstream_hash_module \
+    --without-http_upstream_ip_hash_module \
+    --without-http_upstream_least_conn_module \
+    --without-http_upstream_random_module \
+    --without-http_upstream_keepalive_module \
+    --without-http_upstream_zone_module && \
+    make && \
+    cp objs/nginx /nginx && \
+    strip --strip-all /nginx && \
+    upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
+
+################################################################################
 # BUILD NGINX SSL (includes gzip)
 ################################################################################
 FROM build-openssl AS build-ssl
@@ -345,6 +397,18 @@ COPY --from=build-gzip /nginx /nginx
 FROM nginx-user AS gzip-upx
 
 COPY --from=build-gzip /nginx-upx /nginx
+################################################################################
+# FINAL Nginx SSI
+################################################################################
+FROM nginx-user AS ssi
+
+COPY --from=build-ssi /nginx /nginx
+################################################################################
+# FINAL Nginx SSI Upx
+################################################################################
+FROM nginx-user AS ssi-upx
+
+COPY --from=build-ssi /nginx-upx /nginx
 ################################################################################
 # FINAL Nginx SSL
 ################################################################################

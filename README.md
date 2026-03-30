@@ -28,14 +28,16 @@ A blazing-fast, container-native NGINX image—just **hundreds of kilobytes**—
 Multiple image variants are published for different use cases.
 **Choose the tag that matches your needs:**
 
-| Tag                | Features                       | SSL/TLS | gzip | UPX-compressed | Platforms<sup>†</sup>                        | Typical Use              |
-| ------------------ | ------------------------------ | :-----: | :--: | :------------: | :------------------------------------------- | ------------------------ |
-| `:1.29.5`          | Minimal HTTP, FastCGI          |    ❌    |   ❌  |        ❌       | All supported                                | Most minimal HTTP only   |
-| `:1.29.5-upx`      | Same as above (smaller binary) |    ❌    |   ❌  |        ✅       | `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` | Smallest HTTP only       |
-| `:1.29.5-gzip`     | HTTP, FastCGI, gzip (encoding) |    ❌    |   ✅  |        ❌       | All supported                                | gzip-compress HTTP       |
-| `:1.29.5-gzip-upx` | gzip, UPX-compressed           |    ❌    |   ✅  |        ✅       | UPX platforms (see above)                    | Smallest with gzip       |
-| `:1.29.5-ssl`      | HTTP, FastCGI, SSL/TLS, gzip   |    ✅    |   ✅  |        ❌       | All supported                                | HTTPS support            |
-| `:1.29.5-ssl-upx`  | SSL/TLS, gzip, UPX-compressed  |    ✅    |   ✅  |        ✅       | UPX platforms (see above)                    | HTTPS, smallest with SSL |
+| Tag                | Features                       | SSL/TLS | gzip | SSI | UPX-compressed | Platforms<sup>†</sup>                        | Typical Use              |
+| ------------------ | ------------------------------ | :-----: | :--: | :-: | :------------: | :------------------------------------------- | ------------------------ |
+| `:1.29.5`          | Minimal HTTP, FastCGI          |    ❌    |   ❌  |  ❌  |        ❌       | All supported                                | Most minimal HTTP only   |
+| `:1.29.5-upx`      | Same as above (smaller binary) |    ❌    |   ❌  |  ❌  |        ✅       | `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` | Smallest HTTP only       |
+| `:1.29.5-gzip`     | HTTP, FastCGI, gzip (encoding) |    ❌    |   ✅  |  ❌  |        ❌       | All supported                                | gzip-compress HTTP       |
+| `:1.29.5-gzip-upx` | gzip, UPX-compressed           |    ❌    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Smallest with gzip       |
+| `:1.29.5-ssi`      | HTTP, FastCGI, gzip, SSI       |    ❌    |   ✅  |  ✅  |        ❌       | All supported                                | Static sites with SSI    |
+| `:1.29.5-ssi-upx`  | gzip, SSI, UPX-compressed      |    ❌    |   ✅  |  ✅  |        ✅       | UPX platforms (see above)                    | Smallest with SSI        |
+| `:1.29.5-ssl`      | HTTP, FastCGI, SSL/TLS, gzip   |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | HTTPS support            |
+| `:1.29.5-ssl-upx`  | SSL/TLS, gzip, UPX-compressed  |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | HTTPS, smallest with SSL |
 
 <sup>†</sup> UPX-compressed images (`-upx` tags) are **not** built for `s390x` or `riscv64`, since UPX does not support them on Alpine.
 
@@ -66,7 +68,7 @@ Multiple image variants are published for different use cases.
 * **Logs to stdout/stderr**: Perfect for Docker/Kubernetes observability.
 * **Plug-and-play config**: Use the included config, or mount your own.
 * **Built for insecure HTTP**: Use behind any SSL-terminating reverse proxy (Caddy, Traefik, HAProxy, nginx, Cloudflare, etc.).
-* **SSL/TLS and gzip**: Optional tags (`-ssl`, `-gzip`, and `-upx` variants) for more features.
+* **SSL/TLS, gzip, and SSI**: Optional tags (`-ssl`, `-gzip`, `-ssi`, and `-upx` variants) for more features.
 
 ---
 
@@ -182,14 +184,16 @@ http {
 
 ## 🏷️ Tag and Feature Reference
 
-| Tag                | gzip | SSL/TLS | UPX | Description                  | Platforms     |
-| ------------------ | :--: | :-----: | :-: | ---------------------------- | ------------- |
-| `:1.29.5`          |   ❌  |    ❌    |  ❌  | Minimal HTTP only            | all           |
-| `:1.29.5-upx`      |   ❌  |    ❌    |  ✅  | Minimal HTTP, smallest size  | upx platforms |
-| `:1.29.5-gzip`     |   ✅  |    ❌    |  ❌  | gzip content-encoding        | all           |
-| `:1.29.5-gzip-upx` |   ✅  |    ❌    |  ✅  | gzip, smallest size          | upx platforms |
-| `:1.29.5-ssl`      |   ✅  |    ✅    |  ❌  | SSL/TLS, gzip                | all           |
-| `:1.29.5-ssl-upx`  |   ✅  |    ✅    |  ✅  | SSL/TLS, gzip, smallest size | upx platforms |
+| Tag                | gzip | SSL/TLS | SSI | UPX | Description                  | Platforms     |
+| ------------------ | :--: | :-----: | :-: | :-: | ---------------------------- | ------------- |
+| `:1.29.5`          |   ❌  |    ❌    |  ❌  |  ❌  | Minimal HTTP only            | all           |
+| `:1.29.5-upx`      |   ❌  |    ❌    |  ❌  |  ✅  | Minimal HTTP, smallest size  | upx platforms |
+| `:1.29.5-gzip`     |   ✅  |    ❌    |  ❌  |  ❌  | gzip content-encoding        | all           |
+| `:1.29.5-gzip-upx` |   ✅  |    ❌    |  ❌  |  ✅  | gzip, smallest size          | upx platforms |
+| `:1.29.5-ssi`      |   ✅  |    ❌    |  ✅  |  ❌  | gzip, SSI                    | all           |
+| `:1.29.5-ssi-upx`  |   ✅  |    ❌    |  ✅  |  ✅  | gzip, SSI, smallest size     | upx platforms |
+| `:1.29.5-ssl`      |   ✅  |    ✅    |  ❌  |  ❌  | SSL/TLS, gzip                | all           |
+| `:1.29.5-ssl-upx`  |   ✅  |    ✅    |  ❌  |  ✅  | SSL/TLS, gzip, smallest size | upx platforms |
 
 **What’s a “UPX platform”?**
 Currently: `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` (but not `s390x` or `riscv64`).
@@ -202,10 +206,11 @@ Currently: `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` (but not `s390x` or `ris
 | ------------------- | :-------: | ----------------------------------- |
 | Static file serving |     ✅     | `/www` is default root              |
 | FastCGI/PHP-FPM     |     ✅     | Use with `php-fpm` container        |
-| gzip                |  *varies* | Use a `-gzip` or `-ssl` tag         |
+| gzip                |  *varies* | Use a `-gzip`, `-ssi`, or `-ssl` tag |
 | SSL/TLS             |  *varies* | Use a `-ssl` tag                    |
 | Proxy/Upstream      |     ❌     | Not included (smaller, more secure) |
-| SSI, autoindex      |     ❌     | Not included                        |
+| SSI                 |  *varies* | Use a `-ssi` tag                    |
+| autoindex           |     ❌     | Not included                        |
 | Custom config       |     ✅     | Mount `/conf/nginx.conf`            |
 | Logs to stdout      |     ✅     | Container-native                    |
 | GPG-verified build  |     ✅     | Verified source integrity           |

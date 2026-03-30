@@ -10,6 +10,8 @@ micro:
 micro-upx:upx
 gzip:gzip
 gzip-upx:gzip-upx
+ssi:ssi
+ssi-upx:ssi-upx
 ssl:ssl
 ssl-upx:ssl-upx
 "
