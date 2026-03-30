@@ -4,7 +4,7 @@
 # GLOBAL BUILD ARGS
 ################################################################################
 
-ARG NGINX_VERSION=1.29.5
+ARG NGINX_VERSION=1.29.7
 ARG OPENSSL_VERSION=3.6.1
 
 ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fvisibility=hidden -fuse-linker-plugin -Wimplicit -Os -s -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -static -Wno-cast-function-type -Wno-implicit-function-declaration"

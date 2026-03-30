@@ -30,14 +30,14 @@ Multiple image variants are published for different use cases.
 
 | Tag                | Features                       | SSL/TLS | gzip | SSI | UPX-compressed | Platforms<sup>†</sup>                        | Typical Use              |
 | ------------------ | ------------------------------ | :-----: | :--: | :-: | :------------: | :------------------------------------------- | ------------------------ |
-| `:1.29.5`          | Minimal HTTP, FastCGI          |    ❌    |   ❌  |  ❌  |        ❌       | All supported                                | Most minimal HTTP only   |
-| `:1.29.5-upx`      | Same as above (smaller binary) |    ❌    |   ❌  |  ❌  |        ✅       | `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` | Smallest HTTP only       |
-| `:1.29.5-gzip`     | HTTP, FastCGI, gzip (encoding) |    ❌    |   ✅  |  ❌  |        ❌       | All supported                                | gzip-compress HTTP       |
-| `:1.29.5-gzip-upx` | gzip, UPX-compressed           |    ❌    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Smallest with gzip       |
-| `:1.29.5-ssi`      | HTTP, FastCGI, gzip, SSI       |    ❌    |   ✅  |  ✅  |        ❌       | All supported                                | Static sites with SSI    |
-| `:1.29.5-ssi-upx`  | gzip, SSI, UPX-compressed      |    ❌    |   ✅  |  ✅  |        ✅       | UPX platforms (see above)                    | Smallest with SSI        |
-| `:1.29.5-ssl`      | HTTP, FastCGI, SSL/TLS, gzip   |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | HTTPS support            |
-| `:1.29.5-ssl-upx`  | SSL/TLS, gzip, UPX-compressed  |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | HTTPS, smallest with SSL |
+| `:1.29.7`          | Minimal HTTP, FastCGI          |    ❌    |   ❌  |  ❌  |        ❌       | All supported                                | Most minimal HTTP only   |
+| `:1.29.7-upx`      | Same as above (smaller binary) |    ❌    |   ❌  |  ❌  |        ✅       | `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` | Smallest HTTP only       |
+| `:1.29.7-gzip`     | HTTP, FastCGI, gzip (encoding) |    ❌    |   ✅  |  ❌  |        ❌       | All supported                                | gzip-compress HTTP       |
+| `:1.29.7-gzip-upx` | gzip, UPX-compressed           |    ❌    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Smallest with gzip       |
+| `:1.29.7-ssi`      | HTTP, FastCGI, gzip, SSI       |    ❌    |   ✅  |  ✅  |        ❌       | All supported                                | Static sites with SSI    |
+| `:1.29.7-ssi-upx`  | gzip, SSI, UPX-compressed      |    ❌    |   ✅  |  ✅  |        ✅       | UPX platforms (see above)                    | Smallest with SSI        |
+| `:1.29.7-ssl`      | HTTP, FastCGI, SSL/TLS, gzip   |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | HTTPS support            |
+| `:1.29.7-ssl-upx`  | SSL/TLS, gzip, UPX-compressed  |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | HTTPS, smallest with SSL |
 
 <sup>†</sup> UPX-compressed images (`-upx` tags) are **not** built for `s390x` or `riscv64`, since UPX does not support them on Alpine.
 
@@ -45,7 +45,7 @@ Multiple image variants are published for different use cases.
 
 ## 📦 How Does the Size Compare?
 
-| Platform | Official nginx:1.29 | nginx-micro:1.29.5-upx | nginx-micro:1.29.5 |
+| Platform | Official nginx:1.29 | nginx-micro:1.29.7-upx | nginx-micro:1.29.7 |
 | -------- | :-----------------: | :--------------------: | :----------------: |
 | amd64    |       68.86 MB      |       **432 KB**       |       1.19 MB      |
 | arm64    |       65.54 MB      |       **423 KB**       |       1.17 MB      |
@@ -186,14 +186,14 @@ http {
 
 | Tag                | gzip | SSL/TLS | SSI | UPX | Description                  | Platforms     |
 | ------------------ | :--: | :-----: | :-: | :-: | ---------------------------- | ------------- |
-| `:1.29.5`          |   ❌  |    ❌    |  ❌  |  ❌  | Minimal HTTP only            | all           |
-| `:1.29.5-upx`      |   ❌  |    ❌    |  ❌  |  ✅  | Minimal HTTP, smallest size  | upx platforms |
-| `:1.29.5-gzip`     |   ✅  |    ❌    |  ❌  |  ❌  | gzip content-encoding        | all           |
-| `:1.29.5-gzip-upx` |   ✅  |    ❌    |  ❌  |  ✅  | gzip, smallest size          | upx platforms |
-| `:1.29.5-ssi`      |   ✅  |    ❌    |  ✅  |  ❌  | gzip, SSI                    | all           |
-| `:1.29.5-ssi-upx`  |   ✅  |    ❌    |  ✅  |  ✅  | gzip, SSI, smallest size     | upx platforms |
-| `:1.29.5-ssl`      |   ✅  |    ✅    |  ❌  |  ❌  | SSL/TLS, gzip                | all           |
-| `:1.29.5-ssl-upx`  |   ✅  |    ✅    |  ❌  |  ✅  | SSL/TLS, gzip, smallest size | upx platforms |
+| `:1.29.7`          |   ❌  |    ❌    |  ❌  |  ❌  | Minimal HTTP only            | all           |
+| `:1.29.7-upx`      |   ❌  |    ❌    |  ❌  |  ✅  | Minimal HTTP, smallest size  | upx platforms |
+| `:1.29.7-gzip`     |   ✅  |    ❌    |  ❌  |  ❌  | gzip content-encoding        | all           |
+| `:1.29.7-gzip-upx` |   ✅  |    ❌    |  ❌  |  ✅  | gzip, smallest size          | upx platforms |
+| `:1.29.7-ssi`      |   ✅  |    ❌    |  ✅  |  ❌  | gzip, SSI                    | all           |
+| `:1.29.7-ssi-upx`  |   ✅  |    ❌    |  ✅  |  ✅  | gzip, SSI, smallest size     | upx platforms |
+| `:1.29.7-ssl`      |   ✅  |    ✅    |  ❌  |  ❌  | SSL/TLS, gzip                | all           |
+| `:1.29.7-ssl-upx`  |   ✅  |    ✅    |  ❌  |  ✅  | SSL/TLS, gzip, smallest size | upx platforms |
 
 **What’s a “UPX platform”?**
 Currently: `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` (but not `s390x` or `riscv64`).
