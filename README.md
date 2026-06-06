@@ -14,6 +14,7 @@ A blazing-fast, container-native NGINX image—just **hundreds of kilobytes**—
 | amd64    |      ✅     |            ✅            | Standard servers, laptops, cloud |
 | arm64    |      ✅     |            ✅            | Raspberry Pi 4/5, Apple Silicon  |
 | arm/v7   |      ✅     |            ✅            | Older ARM SBCs, IoT devices      |
+| arm/v6   |      ✅     |            ✅            | Raspberry Pi 1/Zero, legacy ARM  |
 | 386      |      ✅     |            ✅            | Legacy x86                       |
 | ppc64le  |      ✅     |            ✅            | IBM Power, OpenPower             |
 | s390x    |      ✅     |            ❌            | IBM Mainframe                    |
@@ -30,14 +31,14 @@ Multiple image variants are published for different use cases.
 
 | Tag                | Features                       | SSL/TLS | gzip | SSI | UPX-compressed | Platforms<sup>†</sup>                        | Typical Use              |
 | ------------------ | ------------------------------ | :-----: | :--: | :-: | :------------: | :------------------------------------------- | ------------------------ |
-| `:1.29.7`          | Minimal HTTP, FastCGI          |    ❌    |   ❌  |  ❌  |        ❌       | All supported                                | Most minimal HTTP only   |
-| `:1.29.7-upx`      | Same as above (smaller binary) |    ❌    |   ❌  |  ❌  |        ✅       | `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` | Smallest HTTP only       |
-| `:1.29.7-gzip`     | HTTP, FastCGI, gzip (encoding) |    ❌    |   ✅  |  ❌  |        ❌       | All supported                                | gzip-compress HTTP       |
-| `:1.29.7-gzip-upx` | gzip, UPX-compressed           |    ❌    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Smallest with gzip       |
-| `:1.29.7-ssi`      | HTTP, FastCGI, gzip, SSI       |    ❌    |   ✅  |  ✅  |        ❌       | All supported                                | Static sites with SSI    |
-| `:1.29.7-ssi-upx`  | gzip, SSI, UPX-compressed      |    ❌    |   ✅  |  ✅  |        ✅       | UPX platforms (see above)                    | Smallest with SSI        |
-| `:1.29.7-ssl`      | HTTP, FastCGI, SSL/TLS, gzip   |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | HTTPS support            |
-| `:1.29.7-ssl-upx`  | SSL/TLS, gzip, UPX-compressed  |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | HTTPS, smallest with SSL |
+| `:1.31.1`          | Minimal HTTP, FastCGI          |    ❌    |   ❌  |  ❌  |        ❌       | All supported                                | Most minimal HTTP only   |
+| `:1.31.1-upx`      | Same as above (smaller binary) |    ❌    |   ❌  |  ❌  |        ✅       | `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le` | Smallest HTTP only       |
+| `:1.31.1-gzip`     | HTTP, FastCGI, gzip (encoding) |    ❌    |   ✅  |  ❌  |        ❌       | All supported                                | gzip-compress HTTP       |
+| `:1.31.1-gzip-upx` | gzip, UPX-compressed           |    ❌    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Smallest with gzip       |
+| `:1.31.1-ssi`      | HTTP, FastCGI, gzip, SSI       |    ❌    |   ✅  |  ✅  |        ❌       | All supported                                | Static sites with SSI    |
+| `:1.31.1-ssi-upx`  | gzip, SSI, UPX-compressed      |    ❌    |   ✅  |  ✅  |        ✅       | UPX platforms (see above)                    | Smallest with SSI        |
+| `:1.31.1-ssl`      | HTTP, FastCGI, SSL/TLS, HTTP/2, HTTP/3, gzip |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | HTTPS, HTTP/2 & HTTP/3   |
+| `:1.31.1-ssl-upx`  | SSL/TLS, HTTP/2, HTTP/3, gzip, UPX-compressed |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | HTTPS/2/3, smallest      |
 
 <sup>†</sup> UPX-compressed images (`-upx` tags) are **not** built for `s390x` or `riscv64`, since UPX does not support them on Alpine.
 
@@ -45,7 +46,7 @@ Multiple image variants are published for different use cases.
 
 ## 📦 How Does the Size Compare?
 
-| Platform | Official nginx:1.29 | nginx-micro:1.29.7-upx | nginx-micro:1.29.7 |
+| Platform | Official nginx:1.31 | nginx-micro:1.31.1-upx | nginx-micro:1.31.1 |
 | -------- | :-----------------: | :--------------------: | :----------------: |
 | amd64    |       68.86 MB      |       **432 KB**       |       1.19 MB      |
 | arm64    |       65.54 MB      |       **423 KB**       |       1.17 MB      |
@@ -68,7 +69,7 @@ Multiple image variants are published for different use cases.
 * **Logs to stdout/stderr**: Perfect for Docker/Kubernetes observability.
 * **Plug-and-play config**: Use the included config, or mount your own.
 * **Built for insecure HTTP**: Use behind any SSL-terminating reverse proxy (Caddy, Traefik, HAProxy, nginx, Cloudflare, etc.).
-* **SSL/TLS, gzip, and SSI**: Optional tags (`-ssl`, `-gzip`, `-ssi`, and `-upx` variants) for more features.
+* **SSL/TLS, HTTP/2, HTTP/3, gzip, and SSI**: Optional tags (`-ssl`, `-gzip`, `-ssi`, and `-upx` variants) for more features. The `-ssl` tags include HTTP/2 and HTTP/3 (QUIC) support.
 
 ---
 
@@ -116,7 +117,6 @@ docker run --rm -p 8080:80 \
 
 ```yaml
 # docker-compose.yml
-version: "3"
 services:
   nginx:
     image: tigersmile/nginx-micro
@@ -144,17 +144,23 @@ networks:
 ```nginx
 user  nginx;
 worker_processes  1;
-error_log  /dev/stdout warn;
-pid        /nginx.pid;
+
+error_log  /dev/stdout;
+pid        /tmp/nginx.pid;
 
 events { worker_connections  1024; }
 
 http {
     include       mime.types;
     default_type  application/octet-stream;
-    access_log    /dev/stdout;
 
-    sendfile      on;
+    log_format standard '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /dev/stdout standard;
+
+    sendfile           on;
     keepalive_timeout  65;
 
     server {
@@ -186,17 +192,17 @@ http {
 
 | Tag                | gzip | SSL/TLS | SSI | UPX | Description                  | Platforms     |
 | ------------------ | :--: | :-----: | :-: | :-: | ---------------------------- | ------------- |
-| `:1.29.7`          |   ❌  |    ❌    |  ❌  |  ❌  | Minimal HTTP only            | all           |
-| `:1.29.7-upx`      |   ❌  |    ❌    |  ❌  |  ✅  | Minimal HTTP, smallest size  | upx platforms |
-| `:1.29.7-gzip`     |   ✅  |    ❌    |  ❌  |  ❌  | gzip content-encoding        | all           |
-| `:1.29.7-gzip-upx` |   ✅  |    ❌    |  ❌  |  ✅  | gzip, smallest size          | upx platforms |
-| `:1.29.7-ssi`      |   ✅  |    ❌    |  ✅  |  ❌  | gzip, SSI                    | all           |
-| `:1.29.7-ssi-upx`  |   ✅  |    ❌    |  ✅  |  ✅  | gzip, SSI, smallest size     | upx platforms |
-| `:1.29.7-ssl`      |   ✅  |    ✅    |  ❌  |  ❌  | SSL/TLS, gzip                | all           |
-| `:1.29.7-ssl-upx`  |   ✅  |    ✅    |  ❌  |  ✅  | SSL/TLS, gzip, smallest size | upx platforms |
+| `:1.31.1`          |   ❌  |    ❌    |  ❌  |  ❌  | Minimal HTTP only            | all           |
+| `:1.31.1-upx`      |   ❌  |    ❌    |  ❌  |  ✅  | Minimal HTTP, smallest size  | upx platforms |
+| `:1.31.1-gzip`     |   ✅  |    ❌    |  ❌  |  ❌  | gzip content-encoding        | all           |
+| `:1.31.1-gzip-upx` |   ✅  |    ❌    |  ❌  |  ✅  | gzip, smallest size          | upx platforms |
+| `:1.31.1-ssi`      |   ✅  |    ❌    |  ✅  |  ❌  | gzip, SSI                    | all           |
+| `:1.31.1-ssi-upx`  |   ✅  |    ❌    |  ✅  |  ✅  | gzip, SSI, smallest size     | upx platforms |
+| `:1.31.1-ssl`      |   ✅  |    ✅    |  ❌  |  ❌  | SSL/TLS, HTTP/2, HTTP/3, gzip            | all           |
+| `:1.31.1-ssl-upx`  |   ✅  |    ✅    |  ❌  |  ✅  | SSL/TLS, HTTP/2, HTTP/3, gzip, smallest  | upx platforms |
 
 **What’s a “UPX platform”?**
-Currently: `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` (but not `s390x` or `riscv64`).
+Currently: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le` (but not `s390x` or `riscv64`).
 
 ---
 
@@ -208,6 +214,8 @@ Currently: `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` (but not `s390x` or `ris
 | FastCGI/PHP-FPM     |     ✅     | Use with `php-fpm` container        |
 | gzip                |  *varies* | Use a `-gzip`, `-ssi`, or `-ssl` tag |
 | SSL/TLS             |  *varies* | Use a `-ssl` tag                    |
+| HTTP/2              |  *varies* | Included in `-ssl` tags             |
+| HTTP/3 (QUIC)       |  *varies* | Included in `-ssl` tags             |
 | Proxy/Upstream      |     ❌     | Not included (smaller, more secure) |
 | SSI                 |  *varies* | Use a `-ssi` tag                    |
 | autoindex           |     ❌     | Not included                        |
@@ -219,16 +227,16 @@ Currently: `amd64`, `arm64`, `arm/v7`, `386`, `ppc64le` (but not `s390x` or `ris
 
 ## 🔒 Security Notes
 
-* **Runs as non-root (`nginx`, uid 101) by default.**
+* **Worker processes drop to the unprivileged `nginx` user (uid 101).**
 
-  * Enforced by `USER 101:101` in the Dockerfile and `/etc/passwd`.
-  * No privileged capabilities.
-  * Cannot bind to ports below 1024 unless run as root.
+  * The image ships `/etc/passwd` and `/etc/group` defining `nginx` (uid/gid 101), and the default config uses `user nginx;`.
+  * The master process starts as root (the container's default user) so it can bind port 80/443, then nginx itself drops the workers to `nginx` — this is standard nginx behavior, not a container `USER` override.
+  * To run the **entire** process tree (including the master) as non-root, pass `--user 101:101`. In that case you must listen on an unprivileged port (≥1024), since a non-root master cannot bind 80/443.
 * No shell or package manager—cannot be “container escaped” by shell exploits.
-* No writable filesystem, no interpreters.
+* Statically linked, no interpreters, minimal attack surface.
 
 > **Note:**
-> If you need to bind to privileged ports (like 80/443) on a host, you may override the user with `--user root` or by building your own image, but this is not recommended for security reasons.
+> Because the master runs as root by default, binding privileged ports (80/443) works out of the box. If you front this image with a reverse proxy, prefer running fully unprivileged with `--user 101:101` on a high port.
 
 ---
 
@@ -241,6 +249,12 @@ docker buildx bake
 ```
 
 *(Uses included `docker-bake.hcl` for all architectures and tags.)*
+
+---
+
+## 📄 License
+
+Released under the [MIT License](./LICENSE). © 2025 James Dornan.
 
 ---
 

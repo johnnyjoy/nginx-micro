@@ -3,7 +3,7 @@ name: Release (build & push on tag)
 on:
   push:
     tags:
-      - "v*.*.*"     # Only runs on version tags like v1.29.0
+      - "v*.*.*"     # Only runs on version tags like v1.31.1
 
 permissions:
   contents: read
@@ -47,5 +47,7 @@ jobs:
             nginx-micro-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
             nginx-gzip.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
             nginx-gzip-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
+            nginx-ssi.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
+            nginx-ssi-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
             nginx-ssl.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
             nginx-ssl-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
