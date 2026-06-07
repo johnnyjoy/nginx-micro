@@ -95,7 +95,7 @@ ARG LDFLAGS
 
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
     apk add --no-cache gcc musl-dev linux-headers make binutils wget gnupg \
-      pcre2-dev pcre2-static zlib-dev zlib-static build-base perl
+      pcre2-dev pcre2-static zlib-dev zlib-static perl
 
 RUN apk add upx || true
 
@@ -188,6 +188,7 @@ RUN EXTRA_CONF=""; \
         no-autoload-config \
         no-ui-console \
         --with-rand-seed=devrandom && \
+    make -j"$(nproc)" && \
     make install_sw
 
 ################################################################################
@@ -427,6 +428,9 @@ COPY --from=build-deps /nginx.group /etc/group
 COPY conf /conf
 
 EXPOSE 80
+# nginx treats SIGQUIT as graceful shutdown (drain in-flight connections);
+# Docker's default SIGTERM is nginx "fast shutdown" and drops connections.
+STOPSIGNAL SIGQUIT
 CMD ["/nginx", "-g", "daemon off;"]
 ################################################################################
 # FINAL Nginx Micro
@@ -471,7 +475,8 @@ FROM nginx-user AS ssl
 
 COPY --from=build-ssl /nginx /nginx
 
-EXPOSE 443
+# 443/tcp for HTTP/1.1 + HTTP/2; 443/udp for HTTP/3 (QUIC).
+EXPOSE 443 443/udp
 ################################################################################
 # FINAL Nginx SSL Upx
 ################################################################################
@@ -479,4 +484,5 @@ FROM nginx-user AS ssl-upx
 
 COPY --from=build-ssl /nginx-upx /nginx
 
-EXPOSE 443
+# 443/tcp for HTTP/1.1 + HTTP/2; 443/udp for HTTP/3 (QUIC).
+EXPOSE 443 443/udp
