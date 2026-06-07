@@ -122,7 +122,13 @@ ENV TARGETARCH=${TARGETARCH}
 ARG TARGETPLATFORM
 ENV TARGETPLATFORM=${TARGETPLATFORM}
 
-RUN case "$TARGETPLATFORM" in \
+# EXTRA_CONF carries per-arch Configure quirks. On riscv64, OpenSSL 4.0.0's MD5
+# assembly glue (crypto/md5/md5_riscv.c) references the public MD5_CTX type, which
+# `no-deprecated` compiles out -> "unknown type name 'MD5_CTX'". Disabling asm on
+# riscv64 skips that broken glue (riscv64 is emulated/slow anyway, so the asm
+# optimization is irrelevant there). All other arches keep asm enabled.
+RUN EXTRA_CONF=""; \
+    case "$TARGETPLATFORM" in \
       "linux/amd64")   CONF=linux-x86_64 ;;  \
       "linux/386")     CONF=linux-x86 ;;     \
       "linux/arm/v6")  CONF=linux-armv4 ;;   \
@@ -130,11 +136,11 @@ RUN case "$TARGETPLATFORM" in \
       "linux/arm64")   CONF=linux-aarch64 ;; \
       "linux/ppc64le") CONF=linux-ppc64le ;; \
       "linux/s390x")   CONF=linux64-s390x ;; \
-      "linux/riscv64") CONF=linux64-riscv64 ;; \
+      "linux/riscv64") CONF=linux64-riscv64; EXTRA_CONF="no-asm" ;; \
       *) echo "Unsupported platform: $TARGETPLATFORM" && exit 1 ;; \
     esac && \
-    echo "Configuring for $CONF" && \
-    ./Configure ${CONF} \
+    echo "Configuring for $CONF ${EXTRA_CONF}" && \
+    ./Configure ${CONF} ${EXTRA_CONF} \
         --prefix=/usr \
         no-cms \
         no-md2 \
