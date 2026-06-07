@@ -63,7 +63,7 @@ Multiple image variants are published for different use cases.
 ## ⚡️ Why nginx-micro?
 
 * **FROM scratch**: No shell, no package manager, no interpreter. Zero bloat.
-* **Attack surface**: *Minimized.* Only HTTP and FastCGI (for PHP) are supported by default.
+* **Attack surface**: *Minimized.* Static HTTP, FastCGI (for PHP), and real-IP recovery in every variant; the `-ssl` variant additionally bundles the proxy and `auth_request` modules (by popular demand) for TLS-terminating front ends.
 * **Security**: GPG-verified source, statically linked, no extraneous libraries.
 * **Multi-arch**: Works on virtually any Linux system—cloud, Pi, mainframe, or edge.
 * **Logs to stdout/stderr**: Perfect for Docker/Kubernetes observability.
@@ -146,7 +146,7 @@ user  nginx;
 worker_processes  1;
 
 error_log  /dev/stdout;
-pid        /tmp/nginx.pid;
+pid        /nginx.pid;
 
 events { worker_connections  1024; }
 
@@ -216,7 +216,9 @@ Currently: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le` (but not `s390
 | SSL/TLS             |  *varies* | Use a `-ssl` tag                    |
 | HTTP/2              |  *varies* | Included in `-ssl` tags             |
 | HTTP/3 (QUIC)       |  *varies* | Included in `-ssl` tags             |
-| Proxy/Upstream      |     ❌     | Not included (smaller, more secure) |
+| Proxy/Upstream      |  *varies* | Included in `-ssl` tags (by popular demand) |
+| realip              |     ✅     | Recover client IP behind a reverse proxy |
+| auth_request        |  *varies* | Included in `-ssl` tags                 |
 | SSI                 |  *varies* | Use a `-ssi` tag                    |
 | autoindex           |     ❌     | Not included                        |
 | Custom config       |     ✅     | Mount `/conf/nginx.conf`            |

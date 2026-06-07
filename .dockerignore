@@ -1,33 +1,16 @@
-# Don't send build scripts, docs, or unnecessary files to the build context
+# Send the build only what the Dockerfile actually COPYs from the context:
+#   - conf/      (COPY conf /conf)
+#   - keys/*.key (COPY keys/ /tmp/keys/)
+# The Dockerfile and .dockerignore are always read by the builder regardless of
+# the rules below, so they don't need to be allow-listed. docker-bake.hcl is
+# read from the filesystem by `docker buildx bake`, not from the build context.
 
-# Ignore Git and VCS files
-.git
-.gitignore
-*.swp
-*.swo
+# 1) Ignore everything by default.
+*
 
-# Ignore local OS metadata
-.DS_Store
-Thumbs.db
+# 2) Re-include only the directories copied into images.
+!conf/
+!keys/
 
-# Ignore binaries, build outputs, and cache
-bin/
-*.pyc
-*.o
-*.a
-*.so
-*.exe
-*.out
-
-# Ignore CI/CD artifacts
-*.log
-*.tmp
-*.bak
-
-# Ignore everything except what's needed
-README.md
-docker-bake.hcl
-Dockerfile
-
-# Don't ignore conf/ or your Dockerfile!
-# The minimal build needs Dockerfile and conf/
+# 3) Drop docs/noise that live inside the allow-listed directories.
+keys/README.md

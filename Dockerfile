@@ -7,8 +7,8 @@
 ARG NGINX_VERSION=1.31.1
 ARG OPENSSL_VERSION=4.0.0
 
-ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fvisibility=hidden -fuse-linker-plugin -Wimplicit -Os -s -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -static -Wno-cast-function-type -Wno-implicit-function-declaration"
-ARG LDFLAGS="-flto -fuse-linker-plugin -static -s -Wl,--gc-sections"
+ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fuse-linker-plugin -Os -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -fstack-protector-strong -fPIE -Wno-cast-function-type -Wno-implicit-function-declaration"
+ARG LDFLAGS="-flto -fuse-linker-plugin -static-pie -s -Wl,--gc-sections -Wl,-z,relro -Wl,-z,now -Wl,--build-id=none"
 
 ################################################################################
 # FETCH: download/verify nginx and openssl
@@ -22,34 +22,66 @@ RUN apk add --no-cache wget tar gnupg
 
 WORKDIR /build
 
-# OpenSSL
+# Vendored release-signing public keys (reviewed in git; see keys/README.md).
+# Imported locally so the build never trusts keys fetched from an artifact's
+# own origin at build time.
+COPY keys/ /tmp/keys/
+
+# OpenSSL: pin the SHA-256 AND verify the detached PGP signature against the
+# vendored OpenSSL release key. Update OPENSSL_CHECKSUM whenever OPENSSL_VERSION
+# changes (download the signed asset, verify, then `sha256sum`). The checksum
+# below is for OpenSSL 4.0.0.
 ARG OPENSSL_CHECKSUM="c32cf49a959c4f345f9606982dd36e7d28f7c58b19c2e25d75624d2b3d2f79ac"
-RUN wget -O openssl.tar.gz "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz" && \
-    echo "${OPENSSL_CHECKSUM} openssl.tar.gz" | sha256sum -c - && \
-    mkdir openssl && \
+ARG OPENSSL_GPG_FINGERPRINT="BA5473A2B0587B07FB27CF2D216094DFD0CB81EF"
+RUN set -eux; \
+    wget -O openssl.tar.gz "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"; \
+    wget -O openssl.tar.gz.asc "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz.asc"; \
+    if [ -n "${OPENSSL_CHECKSUM}" ]; then \
+        echo "${OPENSSL_CHECKSUM}  openssl.tar.gz" | sha256sum -c -; \
+    fi; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    gpg --batch --import /tmp/keys/openssl.key; \
+    gpg --batch --status-fd 1 --verify openssl.tar.gz.asc openssl.tar.gz > /tmp/openssl-gpg.status; \
+    sig_primary="$(awk '/^\[GNUPG:\] VALIDSIG/ { print $NF }' /tmp/openssl-gpg.status)"; \
+    echo "openssl tarball signed by primary key: ${sig_primary:-<none>}"; \
+    [ "${sig_primary}" = "${OPENSSL_GPG_FINGERPRINT}" ] || \
+      { echo "ERROR: openssl signature is not from the pinned key (${sig_primary:-none})" >&2; exit 1; }; \
+    mkdir openssl; \
     tar xzf openssl.tar.gz -C openssl --strip-components=1
 
 WORKDIR /build
 
-# nginx
+# Pinned PRIMARY fingerprints of the accepted nginx release signers (keys are
+# vendored in keys/ and reviewed in git; see keys/README.md for provenance).
+ARG NGINX_GPG_FINGERPRINTS="43387825DDB1BB97EC36BA5D007C8D7C15D87369 8540A6F18833A80E9C1653A42FD21310B49F6B46 D6786CE303D9A9022998DC6CC8464D549AF75C0A 7338973069ED3F443F4D37DFA64FD5B17ADB39A8 13C82A63B603576156E30A4EA0EA981B66B0D967"
+
+# Pinned tarball SHA-256 for byte-for-byte reproducibility. MUST be updated
+# whenever NGINX_VERSION changes: download the signed release asset, verify its
+# PGP signature, then record `sha256sum nginx-<version>.tar.gz`. The value below
+# is for nginx 1.31.1. Set to "" to disable the checksum gate (not recommended).
+ARG NGINX_CHECKSUM="9fcaaeb8f22544b09a19a761f3412c4112215422401634bebdd1296a403cc4bc"
+
+# nginx: download the official signed release ASSETS from the nginx GitHub
+# releases (NOT the /archive/ auto-generated tarballs, which have no .asc and
+# unstable checksums), optionally checksum-pin, then verify the PGP signature
+# against the locally vendored keys and assert it was made by a pinned signer.
 RUN set -eux; \
-    wget -O nginx.tar.gz "https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz" && \
-    wget -O nginx.tar.gz.asc "https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz.asc" && \
+    wget -O nginx.tar.gz "https://github.com/nginx/nginx/releases/download/release-${NGINX_VERSION}/nginx-${NGINX_VERSION}.tar.gz"; \
+    wget -O nginx.tar.gz.asc "https://github.com/nginx/nginx/releases/download/release-${NGINX_VERSION}/nginx-${NGINX_VERSION}.tar.gz.asc"; \
+    if [ -n "${NGINX_CHECKSUM}" ]; then \
+        echo "${NGINX_CHECKSUM}  nginx.tar.gz" | sha256sum -c -; \
+    fi; \
     export GNUPGHOME="$(mktemp -d)"; \
-    # Fetch the official PGP-keys page and import *all* .key files it references
-    wget -qO- https://nginx.org/en/pgp_keys.html \
-      | grep -Eo 'href="(/keys/[A-Za-z0-9._-]+\.key)"' \
-      | sed -E 's/^href="(.*)"/\1/' \
-      | sort -u \
-      | while read -r path; do \
-          wget -qO- "https://nginx.org${path}" | gpg --import; \
-        done; \
-    # Verify signature (fails the build if invalid/unknown)
-    gpg --batch --verify nginx.tar.gz.asc nginx.tar.gz; \
-    # Unpack
-    mkdir nginx && \
-    tar tvfz nginx.tar.gz && \
-    tar xvzf nginx.tar.gz -C nginx --strip-components=1
+    gpg --batch --import /tmp/keys/nginx_signing.key /tmp/keys/arut.key /tmp/keys/pluknet.key /tmp/keys/sb.key /tmp/keys/thresh.key; \
+    gpg --batch --status-fd 1 --verify nginx.tar.gz.asc nginx.tar.gz > /tmp/gpg.status; \
+    sig_primary="$(awk '/^\[GNUPG:\] VALIDSIG/ { print $NF }' /tmp/gpg.status)"; \
+    echo "nginx tarball signed by primary key: ${sig_primary:-<none>}"; \
+    case " ${NGINX_GPG_FINGERPRINTS} " in \
+      *" ${sig_primary} "*) echo "OK: signature from a pinned nginx key" ;; \
+      *) echo "ERROR: nginx signature is not from a pinned key (${sig_primary:-none})" >&2; exit 1 ;; \
+    esac; \
+    mkdir nginx; \
+    tar xzf nginx.tar.gz -C nginx --strip-components=1
 
 ################################################################################
 # BUILD DEPS: all static, pcre2, zlib, upx (for optional)
@@ -134,12 +166,21 @@ RUN case "$TARGETPLATFORM" in \
         no-dynamic-engine \
         no-engine \
         no-dso \
-        no-asm \
         no-async \
         no-filenames \
         no-docs \
         no-deprecated \
         no-apps \
+        no-dtls \
+        no-srtp \
+        no-ct \
+        no-ts \
+        no-cmp \
+        no-nextprotoneg \
+        no-ec2m \
+        no-legacy \
+        no-autoload-config \
+        no-ui-console \
         --with-rand-seed=devrandom && \
     make install_sw
 
@@ -154,8 +195,8 @@ WORKDIR /build/nginx
 
 RUN ./configure \
     --sbin-path=/nginx \
-    --pid-path="/tmp/nginx.pid" \
-    --lock-path="/tmp/nginx.lock" \
+    --pid-path="/nginx.pid" \
+    --lock-path="/nginx.lock" \
     --error-log-path="/dev/stdout" \
     --http-log-path="/dev/stdout" \
     --conf-path=/conf/nginx.conf \
@@ -163,8 +204,10 @@ RUN ./configure \
     --with-cc-opt="$CFLAGS" \
     --with-ld-opt="$LDFLAGS" \
     --with-pcre \
+    --with-pcre-jit \
     --with-threads \
     --with-file-aio \
+    --with-http_realip_module \
     --without-select_module \
     --without-poll_module \
     --without-http_charset_module \
@@ -190,7 +233,7 @@ RUN ./configure \
     --without-http_upstream_random_module \
     --without-http_upstream_keepalive_module \
     --without-http_upstream_zone_module && \
-    make && \
+    make -j"$(nproc)" && \
     cp objs/nginx /nginx && \
     strip --strip-all /nginx && \
     upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
@@ -206,8 +249,8 @@ WORKDIR /build/nginx
 
 RUN ./configure \
     --sbin-path=/nginx \
-    --pid-path="/tmp/nginx.pid" \
-    --lock-path="/tmp/nginx.lock" \
+    --pid-path="/nginx.pid" \
+    --lock-path="/nginx.lock" \
     --error-log-path="/dev/stdout" \
     --http-log-path="/dev/stdout" \
     --conf-path=/conf/nginx.conf \
@@ -215,8 +258,10 @@ RUN ./configure \
     --with-cc-opt="$CFLAGS" \
     --with-ld-opt="$LDFLAGS" \
     --with-pcre \
+    --with-pcre-jit \
     --with-threads \
     --with-file-aio \
+    --with-http_realip_module \
     --without-select_module \
     --without-poll_module \
     --with-http_gunzip_module \
@@ -243,7 +288,7 @@ RUN ./configure \
     --without-http_upstream_random_module \
     --without-http_upstream_keepalive_module \
     --without-http_upstream_zone_module && \
-    make && \
+    make -j"$(nproc)" && \
     cp objs/nginx /nginx && \
     strip --strip-all /nginx && \
     upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
@@ -259,8 +304,8 @@ WORKDIR /build/nginx
 
 RUN ./configure \
     --sbin-path=/nginx \
-    --pid-path="/tmp/nginx.pid" \
-    --lock-path="/tmp/nginx.lock" \
+    --pid-path="/nginx.pid" \
+    --lock-path="/nginx.lock" \
     --error-log-path="/dev/stdout" \
     --http-log-path="/dev/stdout" \
     --conf-path=/conf/nginx.conf \
@@ -268,8 +313,10 @@ RUN ./configure \
     --with-cc-opt="$CFLAGS" \
     --with-ld-opt="$LDFLAGS" \
     --with-pcre \
+    --with-pcre-jit \
     --with-threads \
     --with-file-aio \
+    --with-http_realip_module \
     --without-select_module \
     --without-poll_module \
     --with-http_gunzip_module \
@@ -295,7 +342,7 @@ RUN ./configure \
     --without-http_upstream_random_module \
     --without-http_upstream_keepalive_module \
     --without-http_upstream_zone_module && \
-    make && \
+    make -j"$(nproc)" && \
     cp objs/nginx /nginx && \
     strip --strip-all /nginx && \
     upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
@@ -311,8 +358,8 @@ WORKDIR /build/nginx
 
 RUN ./configure \
     --sbin-path=/nginx \
-    --pid-path="/tmp/nginx.pid" \
-    --lock-path="/tmp/nginx.lock" \
+    --pid-path="/nginx.pid" \
+    --lock-path="/nginx.lock" \
     --error-log-path="/dev/stdout" \
     --http-log-path="/dev/stdout" \
     --conf-path=/conf/nginx.conf \
@@ -320,8 +367,10 @@ RUN ./configure \
     --with-cc-opt="$CFLAGS" \
     --with-ld-opt="$LDFLAGS" \
     --with-pcre \
+    --with-pcre-jit \
     --with-threads \
     --with-file-aio \
+    --with-http_realip_module \
     --with-http_ssl_module \
     --with-http_gunzip_module \
     --with-http_gzip_static_module \
@@ -350,7 +399,7 @@ RUN ./configure \
     --without-http_upstream_random_module \
     --without-http_upstream_keepalive_module \
     --without-http_upstream_zone_module && \
-    make && \
+    make -j"$(nproc)" && \
     cp objs/nginx /nginx && \
     strip --strip-all /nginx && \
     upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx

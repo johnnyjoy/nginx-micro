@@ -9,8 +9,126 @@ permissions:
   contents: read
   packages: write
 
+# One platform per job, built in parallel on the closest-matching native runner
+# (amd64/386/ppc64le/s390x/riscv64 on x86, arm/arm64 on native ARM runners), each
+# pushed BY DIGEST. A final merge job assembles the multi-arch manifest lists.
+# This replaces the previous single-runner bake that emulated 7 arches serially.
+
 jobs:
-  bake-push:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.TAG }}
+    steps:
+      - name: Extract version/tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF##*/}
+          echo "TAG=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Native x86 runner.
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            slug: linux-amd64
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+          # Emulated, but lightweight, on x86.
+          - platform: linux/386
+            runner: ubuntu-latest
+            slug: linux-386
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+          # Native ARM runner (arm64 native; arm/v7 + arm/v6 emulate cheaply on ARM).
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            slug: linux-arm64
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+          - platform: linux/arm/v7
+            runner: ubuntu-24.04-arm
+            slug: linux-arm-v7
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+          - platform: linux/arm/v6
+            runner: ubuntu-24.04-arm
+            slug: linux-arm-v6
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+          # Emulated on x86 (no native runners available).
+          - platform: linux/ppc64le
+            runner: ubuntu-latest
+            slug: linux-ppc64le
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+          # s390x and riscv64 are not in UPX_PLATFORMS, so skip the -upx targets.
+          - platform: linux/s390x
+            runner: ubuntu-latest
+            slug: linux-s390x
+            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl
+          - platform: linux/riscv64
+            runner: ubuntu-latest
+            slug: linux-riscv64
+            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build ${{ matrix.platform }} and push by digest
+        id: bake
+        uses: docker/bake-action@v5
+        with:
+          files: docker-bake.hcl
+          targets: ${{ matrix.targets }}
+          set: |
+            *.platform=${{ matrix.platform }}
+            *.args.NGINX_VERSION=${{ needs.prepare.outputs.version }}
+            *.tags=
+            *.provenance=false
+            *.output=type=image,"name=tigersmile/nginx-micro,ghcr.io/johnnyjoy/nginx-micro",push-by-digest=true,name-canonical=true,push=true
+            *.cache-from=type=registry,ref=tigersmile/nginx-micro-cache:${{ matrix.slug }}
+            *.cache-to=type=registry,ref=tigersmile/nginx-micro-cache:${{ matrix.slug }},mode=max
+
+      - name: Export per-target digests
+        run: |
+          mkdir -p digests
+          printf '%s' '${{ steps.bake.outputs.metadata }}' > metadata.json
+          # bake metadata is keyed by target name; keep only entries that produced
+          # an image digest (ignores buildx.* informational keys).
+          jq -r 'to_entries[]
+                 | select(.value | type == "object" and has("containerimage.digest"))
+                 | "\(.key) \(.value["containerimage.digest"])"' metadata.json \
+            | while read -r target digest; do
+                echo "${digest}" > "digests/${target}"
+              done
+          echo "Digests for ${{ matrix.platform }}:"; cat digests/* || true
+
+      - name: Upload digests
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.slug }}
+          path: digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,24 +148,38 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract version/tag
-        id: version
-        run: |
-          TAG=${GITHUB_REF##*/}
-          echo "TAG=${TAG#v}" >> $GITHUB_OUTPUT
-
-      - name: Bake and push all images
-        uses: docker/bake-action@v5
+      - name: Download all digests
+        uses: actions/download-artifact@v4
         with:
-          targets: default
-          files: docker-bake.hcl
-          push: true
-          set: |
-            nginx-micro.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
-            nginx-micro-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
-            nginx-gzip.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
-            nginx-gzip-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
-            nginx-ssi.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
-            nginx-ssi-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
-            nginx-ssl.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
-            nginx-ssl-upx.args.NGINX_VERSION=${{ steps.version.outputs.TAG }}
+          path: digests
+          pattern: digests-*
+
+      - name: Create and push multi-arch manifests
+        env:
+          NGINX_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          SRC_REPO="tigersmile/nginx-micro"   # blobs were pushed to both repos; use one as the digest source
+          targets=$(docker buildx bake -f docker-bake.hcl --print 2>/dev/null | jq -r '.group.default.targets[]')
+          for target in $targets; do
+            # Collect this variant's digests from every platform that built it.
+            mapfile -t digs < <(cat "digests/"*"/${target}" 2>/dev/null | grep . | sort -u || true)
+            if [ "${#digs[@]}" -eq 0 ]; then
+              echo "::warning::no digests found for ${target}, skipping"
+              continue
+            fi
+            # Tags come straight from the bake file (single source of truth).
+            mapfile -t tag_args < <(docker buildx bake -f docker-bake.hcl "${target}" --print 2>/dev/null \
+              | jq -r ".target.\"${target}\".tags[] | \"-t\", .")
+            src_args=()
+            for d in "${digs[@]}"; do src_args+=("${SRC_REPO}@${d}"); done
+            echo "==> ${target}: ${#digs[@]} platforms -> $(printf '%s ' "${tag_args[@]}")"
+            docker buildx imagetools create "${tag_args[@]}" "${src_args[@]}"
+          done
+
+      - name: Inspect published manifests
+        env:
+          NGINX_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          docker buildx imagetools inspect "tigersmile/nginx-micro:${NGINX_VERSION}" || true
+          docker buildx imagetools inspect "tigersmile/nginx-micro:${NGINX_VERSION}-ssl" || true
