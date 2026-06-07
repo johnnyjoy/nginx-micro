@@ -37,39 +37,39 @@ jobs:
           - platform: linux/amd64
             runner: ubuntu-latest
             slug: linux-amd64
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-upx-unprivileged
           # Emulated, but lightweight, on x86.
           - platform: linux/386
             runner: ubuntu-latest
             slug: linux-386
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-upx-unprivileged
           # Native ARM runner (arm64 native; arm/v7 + arm/v6 emulate cheaply on ARM).
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
             slug: linux-arm64
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-upx-unprivileged
           - platform: linux/arm/v7
             runner: ubuntu-24.04-arm
             slug: linux-arm-v7
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-upx-unprivileged
           - platform: linux/arm/v6
             runner: ubuntu-24.04-arm
             slug: linux-arm-v6
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-upx-unprivileged
           # Emulated on x86 (no native runners available).
           - platform: linux/ppc64le
             runner: ubuntu-latest
             slug: linux-ppc64le
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-upx-unprivileged
           # s390x and riscv64 are not in UPX_PLATFORMS, so skip the -upx targets.
           - platform: linux/s390x
             runner: ubuntu-latest
             slug: linux-s390x
-            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl
+            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl,nginx-ssl-unprivileged
           - platform: linux/riscv64
             runner: ubuntu-latest
             slug: linux-riscv64
-            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl
+            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl,nginx-ssl-unprivileged
     steps:
       - uses: actions/checkout@v4
 

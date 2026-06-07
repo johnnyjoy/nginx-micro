@@ -412,6 +412,14 @@ RUN ./configure \
     upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
 
 ################################################################################
+# SKELETON: a writable /tmp owned by uid 101 for the unprivileged variants.
+# scratch has no shell/mkdir at runtime, so the directory must be pre-created
+# here and COPY --chown'd into the final image.
+################################################################################
+FROM alpine:edge AS unpriv-skel
+RUN mkdir -p /skel/tmp && chown 101:101 /skel/tmp && chmod 0700 /skel/tmp
+
+################################################################################
 # Minimal /etc/passwd, /etc/group
 ################################################################################
 FROM scratch AS nginx-user
@@ -486,3 +494,50 @@ COPY --from=build-ssl /nginx-upx /nginx
 
 # 443/tcp for HTTP/1.1 + HTTP/2; 443/udp for HTTP/3 (QUIC).
 EXPOSE 443 443/udp
+################################################################################
+# UNPRIVILEGED base: runs as UID 101, binds high ports, writable state in /tmp.
+# Reuses the SSL binary (it carries the proxy/TLS/H2/H3 modules) and only swaps
+# the bundled config + ownership so the whole process tree runs rootless.
+################################################################################
+FROM scratch AS nginx-user-unprivileged
+
+ARG NGINX_VERSION
+
+LABEL maintainer="James Dornan <james@catch22.com>" \
+      org.opencontainers.image.source="https://github.com/johnnyjoy/nginx-micro" \
+      org.opencontainers.image.version="${NGINX_VERSION}"
+
+COPY --from=build-deps /nginx.passwd /etc/passwd
+COPY --from=build-deps /nginx.group /etc/group
+
+# Shared mime.types / fastcgi_params, then override nginx.conf with the
+# unprivileged config (no "user" directive, high ports, /tmp paths).
+COPY conf /conf
+COPY conf-unprivileged/nginx.conf /conf/nginx.conf
+
+# The only writable directory in the image, owned by uid 101.
+COPY --from=unpriv-skel --chown=101:101 /skel/tmp /tmp
+
+# 8080/tcp for HTTP/1.1 + HTTP/2; non-root cannot bind ports < 1024.
+EXPOSE 8080
+STOPSIGNAL SIGQUIT
+USER 101:101
+CMD ["/nginx", "-g", "daemon off;"]
+################################################################################
+# FINAL Nginx SSL Unprivileged
+################################################################################
+FROM nginx-user-unprivileged AS ssl-unprivileged
+
+COPY --from=build-ssl /nginx /nginx
+
+# 8443/tcp for HTTP/1.1 + HTTP/2; 8443/udp for HTTP/3 (QUIC).
+EXPOSE 8443 8443/udp
+################################################################################
+# FINAL Nginx SSL Unprivileged Upx
+################################################################################
+FROM nginx-user-unprivileged AS ssl-upx-unprivileged
+
+COPY --from=build-ssl /nginx-upx /nginx
+
+# 8443/tcp for HTTP/1.1 + HTTP/2; 8443/udp for HTTP/3 (QUIC).
+EXPOSE 8443 8443/udp

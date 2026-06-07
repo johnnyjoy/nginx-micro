@@ -37,7 +37,9 @@ group "default" {
     "nginx-ssi",
     "nginx-ssi-upx",
     "nginx-ssl",
-    "nginx-ssl-upx"
+    "nginx-ssl-upx",
+    "nginx-ssl-unprivileged",
+    "nginx-ssl-upx-unprivileged"
   ]
 }
 
@@ -78,6 +80,62 @@ target "nginx-micro-upx" {
     "tigersmile/nginx-micro:upx",
     "ghcr.io/johnnyjoy/nginx-micro:${NGINX_VERSION}-upx",
     "ghcr.io/johnnyjoy/nginx-micro:upx"
+  ]
+  cache-from = [
+    {
+      type = "registry",
+      ref = "tigersmile/nginx-micro-cache"
+    }
+  ]
+  cache-to = [
+    {
+      type = "registry",
+      ref = "tigersmile/nginx-micro-cache"
+    }
+  ]
+  args = {
+    "NGINX_VERSION" = "${NGINX_VERSION}"
+  }
+  platforms = "${UPX_PLATFORMS}"
+}
+
+target "nginx-ssl-unprivileged" {
+  context = "."
+  dockerfile = "Dockerfile"
+  target = "ssl-unprivileged"
+  tags = [
+    "tigersmile/nginx-micro:${NGINX_VERSION}-ssl-unprivileged",
+    "tigersmile/nginx-micro:ssl-unprivileged",
+    "ghcr.io/johnnyjoy/nginx-micro:${NGINX_VERSION}-ssl-unprivileged",
+    "ghcr.io/johnnyjoy/nginx-micro:ssl-unprivileged"
+  ]
+  cache-from = [
+    {
+      type = "registry",
+      ref = "tigersmile/nginx-micro-cache"
+    }
+  ]
+  cache-to = [
+    {
+      type = "registry",
+      ref = "tigersmile/nginx-micro-cache"
+    }
+  ]
+  args = {
+    "NGINX_VERSION" = "${NGINX_VERSION}"
+  }
+  platforms = "${ALL_PLATFORMS}"
+}
+
+target "nginx-ssl-upx-unprivileged" {
+  context = "."
+  dockerfile = "Dockerfile"
+  target = "ssl-upx-unprivileged"
+  tags = [
+    "tigersmile/nginx-micro:${NGINX_VERSION}-ssl-upx-unprivileged",
+    "tigersmile/nginx-micro:ssl-upx-unprivileged",
+    "ghcr.io/johnnyjoy/nginx-micro:${NGINX_VERSION}-ssl-upx-unprivileged",
+    "ghcr.io/johnnyjoy/nginx-micro:ssl-upx-unprivileged"
   ]
   cache-from = [
     {

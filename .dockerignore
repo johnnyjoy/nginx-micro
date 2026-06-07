@@ -1,6 +1,7 @@
 # Send the build only what the Dockerfile actually COPYs from the context:
-#   - conf/      (COPY conf /conf)
-#   - keys/*.key (COPY keys/ /tmp/keys/)
+#   - conf/             (COPY conf /conf)
+#   - conf-unprivileged/ (COPY conf-unprivileged/nginx.conf /conf/nginx.conf)
+#   - keys/*.key        (COPY keys/ /tmp/keys/)
 # The Dockerfile and .dockerignore are always read by the builder regardless of
 # the rules below, so they don't need to be allow-listed. docker-bake.hcl is
 # read from the filesystem by `docker buildx bake`, not from the build context.
@@ -10,6 +11,7 @@
 
 # 2) Re-include only the directories copied into images.
 !conf/
+!conf-unprivileged/
 !keys/
 
 # 3) Drop docs/noise that live inside the allow-listed directories.

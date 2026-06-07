@@ -39,8 +39,20 @@ Multiple image variants are published for different use cases.
 | `:1.31.1-ssi-upx`  | gzip, SSI, UPX-compressed      |    ❌    |   ✅  |  ✅  |        ✅       | UPX platforms (see above)                    | Smallest with SSI        |
 | `:1.31.1-ssl`      | HTTP, FastCGI, SSL/TLS, HTTP/2, HTTP/3, gzip |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | HTTPS, HTTP/2 & HTTP/3   |
 | `:1.31.1-ssl-upx`  | SSL/TLS, HTTP/2, HTTP/3, gzip, UPX-compressed |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | HTTPS/2/3, smallest      |
+| `:1.31.1-ssl-unprivileged`     | Same as `-ssl`, but runs **rootless** (UID 101, ports `8080`/`8443`) |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | Rootless HTTPS/2/3 + reverse proxy |
+| `:1.31.1-ssl-upx-unprivileged` | Rootless `-ssl`, UPX-compressed |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Rootless, smallest       |
 
 <sup>†</sup> UPX-compressed images (`-upx` tags) are **not** built for `s390x` or `riscv64`, since UPX does not support them on Alpine.
+
+> **Rootless variants** (`-unprivileged`): the entire process tree runs as the
+> non-root `nginx` user (UID 101). Because non-root processes cannot bind ports
+> below 1024, they listen on **8080** (HTTP) and **8443** (HTTPS/QUIC), and all
+> runtime-writable state (pid, temp paths) lives under `/tmp`. Map them with
+> e.g. `-p 80:8080 -p 443:8443`. They reuse the `-ssl` binary, so the proxy,
+> `auth_request`, HTTP/2 and HTTP/3 modules are all included — ideal for
+> rootless reverse-proxy deployments. Provide your own config via
+> `-v ./nginx.conf:/conf/nginx.conf:ro` (keep the no-`user`, high-port, and
+> `/tmp` constraints).
 
 ---
 
