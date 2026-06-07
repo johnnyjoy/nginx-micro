@@ -93,6 +93,12 @@ jobs:
       - name: Build ${{ matrix.platform }} and push by digest
         id: bake
         uses: docker/bake-action@v5
+        env:
+          # Disable the default provenance/SBOM attestations so push-by-digest
+          # yields a single-platform image manifest (not an attestation index),
+          # which the merge step can combine cleanly. (buildx has no settable
+          # `*.provenance` bake key in this version.)
+          BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
         with:
           files: docker-bake.hcl
           targets: ${{ matrix.targets }}
@@ -100,7 +106,6 @@ jobs:
             *.platform=${{ matrix.platform }}
             *.args.NGINX_VERSION=${{ needs.prepare.outputs.version }}
             *.tags=
-            *.provenance=false
             *.output=type=image,"name=tigersmile/nginx-micro,ghcr.io/johnnyjoy/nginx-micro",push-by-digest=true,name-canonical=true,push=true
             *.cache-from=type=registry,ref=tigersmile/nginx-micro-cache:${{ matrix.slug }}
             *.cache-to=type=registry,ref=tigersmile/nginx-micro-cache:${{ matrix.slug }},mode=max
