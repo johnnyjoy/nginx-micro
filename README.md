@@ -1,178 +1,167 @@
 # nginx-micro
 
-> **Ultra-minimal, statically-linked, multi-architecture NGINX Docker images.**
+Ultra-minimal, statically linked, multi-architecture NGINX container images—typically **hundreds of kilobytes** compressed, built `FROM scratch` with no shell and no package manager.
 
-A blazing-fast, container-native NGINX image—just **hundreds of kilobytes**—with no shell, no package manager, and no attack surface beyond static serving and FastCGI.
-**Purpose-built** for modern container stacks, edge deployments, and anyone who wants a rock-solid, tiny HTTP server.
-
----
-
-## 🚀 Supported Platforms
-
-| Platform | Supported? | UPX-compressed Variant? | Typical Use Case                 |
-| -------- | :--------: | :---------------------: | -------------------------------- |
-| amd64    |      ✅     |            ✅            | Standard servers, laptops, cloud |
-| arm64    |      ✅     |            ✅            | Raspberry Pi 4/5, Apple Silicon  |
-| arm/v7   |      ✅     |            ✅            | Older ARM SBCs, IoT devices      |
-| arm/v6   |      ✅     |            ✅            | Raspberry Pi 1/Zero, legacy ARM  |
-| 386      |      ✅     |            ✅            | Legacy x86                       |
-| ppc64le  |      ✅     |            ✅            | IBM Power, OpenPower             |
-| s390x    |      ✅     |            ❌            | IBM Mainframe                    |
-| riscv64  |      ✅     |            ❌            | Next-gen embedded/server         |
-
-> **Note:** UPX-compressed images (`-upx` tags) are only published for platforms supported by UPX on Alpine Linux.
+Designed for static sites, health checks, sidecars, and TLS-terminating front ends where image size and attack surface matter.
 
 ---
 
-## 🏷️ Image Tags & Feature Matrix
+## Supported platforms
 
-Multiple image variants are published for different use cases.
-**Choose the tag that matches your needs:**
+| Platform | Images | UPX (`-upx` tags) | Typical use |
+| -------- | :----: | :-----------------: | ----------- |
+| amd64    |   ✅   |         ✅          | Servers, cloud, laptops |
+| arm64    |   ✅   |         ✅          | Apple Silicon, Pi 4/5 |
+| arm/v7   |   ✅   |         ✅          | Older ARM boards, IoT |
+| arm/v6   |   ✅   |         ✅          | Pi 1/Zero, legacy ARM |
+| 386      |   ✅   |         ✅          | Legacy x86 |
+| ppc64le  |   ✅   |         ✅          | IBM Power |
+| s390x    |   ✅   |         ❌          | IBM Z |
+| riscv64  |   ✅   |         ❌          | RISC-V |
 
-| Tag                | Features                       | SSL/TLS | gzip | SSI | UPX-compressed | Platforms<sup>†</sup>                        | Typical Use              |
-| ------------------ | ------------------------------ | :-----: | :--: | :-: | :------------: | :------------------------------------------- | ------------------------ |
-| `:1.31.1`          | Minimal HTTP, FastCGI          |    ❌    |   ❌  |  ❌  |        ❌       | All supported                                | Most minimal HTTP only   |
-| `:1.31.1-upx`      | Same as above (smaller binary) |    ❌    |   ❌  |  ❌  |        ✅       | `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le` | Smallest HTTP only       |
-| `:1.31.1-gzip`     | HTTP, FastCGI, gzip (encoding) |    ❌    |   ✅  |  ❌  |        ❌       | All supported                                | gzip-compress HTTP       |
-| `:1.31.1-gzip-upx` | gzip, UPX-compressed           |    ❌    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Smallest with gzip       |
-| `:1.31.1-ssi`      | HTTP, FastCGI, gzip, SSI       |    ❌    |   ✅  |  ✅  |        ❌       | All supported                                | Static sites with SSI    |
-| `:1.31.1-ssi-upx`  | gzip, SSI, UPX-compressed      |    ❌    |   ✅  |  ✅  |        ✅       | UPX platforms (see above)                    | Smallest with SSI        |
-| `:1.31.1-ssl`      | HTTP, FastCGI, SSL/TLS, HTTP/2, HTTP/3, gzip |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | HTTPS, HTTP/2 & HTTP/3   |
-| `:1.31.1-ssl-upx`  | SSL/TLS, HTTP/2, HTTP/3, gzip, UPX-compressed |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | HTTPS/2/3, smallest      |
-| `:1.31.1-ssl-unprivileged`     | Same as `-ssl`, but runs **rootless** (UID 101, ports `8080`/`8443`) |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | Rootless HTTPS/2/3 + reverse proxy |
-| `:1.31.1-ssl-unprivileged-upx` | Rootless `-ssl`, UPX-compressed |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Rootless, smallest       |
-
-<sup>†</sup> UPX-compressed images (`-upx` tags) are **not** built for `s390x` or `riscv64`, since UPX does not support them on Alpine.
-
-> **Rootless variants** (`-unprivileged`): the entire process tree runs as the
-> non-root `nginx` user (UID 101). Because non-root processes cannot bind ports
-> below 1024, they listen on **8080** (HTTP) and **8443** (HTTPS/QUIC), and all
-> runtime-writable state (pid, temp paths) lives under `/tmp`. Map them with
-> e.g. `-p 80:8080 -p 443:8443`. They reuse the `-ssl` binary, so the proxy,
-> `auth_request`, HTTP/2 and HTTP/3 modules are all included — ideal for
-> rootless reverse-proxy deployments. Provide your own config via
-> `-v ./nginx.conf:/conf/nginx.conf:ro` (keep the no-`user`, high-port, and
-> `/tmp` constraints).
+UPX-compressed tags are not published for `s390x` or `riscv64` (UPX unavailable on Alpine for those platforms).
 
 ---
 
-## 📦 How Does the Size Compare?
+## Image tags
 
-| Platform | Official nginx:1.31 | nginx-micro:1.31.1-upx | nginx-micro:1.31.1 |
-| -------- | :-----------------: | :--------------------: | :----------------: |
-| amd64    |       60.18 MB      |       **462.89 KB**    |       589.77 KB    |
-| arm64    |       58.56 MB      |       **443.15 KB**    |       603.78 KB    |
-| arm/v7   |       50.03 MB      |       **449.94 KB**    |       531.84 KB    |
-| 386      |       60.53 MB      |       **477.52 KB**    |       608.38 KB    |
-| ppc64le  |       64.11 MB      |       **498 KB**       |       656.53 KB    |
-| s390x    |       57.84 MB      |          *N/A*         |       646.7 KB     |
-| riscv64  |       55.1 MB       |          *N/A*         |       601.95 KB    |
+Versioned tags use the NGINX release (e.g. `1.31.1`). Rolling aliases are also published: `latest`, `upx`, `gzip`, `ssl`, `ssl-unprivileged`, and corresponding `-upx` names.
 
-> That’s up to **132× smaller** than the official nginx images.
->
-> For reference, `nginx:1.31.1` is currently about `50.03 MB`-`64.11 MB` compressed.
->
-> Secondary baseline: `nginx:1.31.1-alpine-slim` is about `4.76 MB`-`5.82 MB` compressed.
-> Against alpine-slim, `nginx-micro:1.31.1` is about **7.3x-10.9x smaller** and
-> `nginx-micro:1.31.1-upx` is about **9.6x-13.5x smaller**.
+| Tag | gzip | SSL/TLS | SSI | UPX | Platforms | Summary |
+| --- | :--: | :-----: | :-: | :-: | --------- | ------- |
+| `:1.31.1` / `:latest` | ❌ | ❌ | ❌ | ❌ | all | Smallest HTTP + FastCGI |
+| `:1.31.1-upx` / `:upx` | ❌ | ❌ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
+| `:1.31.1-gzip` / `:gzip` | ✅ | ❌ | ❌ | ❌ | all | gzip content-encoding |
+| `:1.31.1-gzip-upx` / `:gzip-upx` | ✅ | ❌ | ❌ | ✅ | UPX platforms† | gzip, smaller binary |
+| `:1.31.1-ssi` / `:ssi` | ✅ | ❌ | ✅ | ❌ | all | gzip + Server Side Includes |
+| `:1.31.1-ssi-upx` / `:ssi-upx` | ✅ | ❌ | ✅ | ✅ | UPX platforms† | SSI, smaller binary |
+| `:1.31.1-ssl` / `:ssl` | ✅ | ✅ | ❌ | ❌ | all | TLS, HTTP/2 & HTTP/3 modules, proxy, auth_request |
+| `:1.31.1-ssl-upx` / `:ssl-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
+| `:1.31.1-ssl-unprivileged` / `:ssl-unprivileged` | ✅ | ✅ | ❌ | ❌ | all | Rootless `-ssl` (UID 101, ports 8080/8443) |
+| `:1.31.1-ssl-unprivileged-upx` / `:ssl-unprivileged-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Rootless, smaller binary |
 
----
+† UPX platforms: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le`.
 
-## ⚡️ Why nginx-micro?
+**Every variant** includes static file serving, FastCGI (for PHP-FPM), and the realip module. The `-ssl` and `-ssl-unprivileged` tags add TLS, HTTP/2 and HTTP/3 (QUIC) modules, gzip, reverse proxy, and auth_request. SSI requires an `-ssi` tag.
 
-* **FROM scratch**: No shell, no package manager, no interpreter. Zero bloat.
-* **Attack surface**: *Minimized.* Static HTTP, FastCGI (for PHP), and real-IP recovery in every variant; the `-ssl` variant additionally bundles the proxy and `auth_request` modules (by popular demand) for TLS-terminating front ends.
-* **Security**: GPG-verified source, statically linked, no extraneous libraries.
-* **Multi-arch**: Works on virtually any Linux system—cloud, Pi, mainframe, or edge.
-* **Logs to stdout/stderr**: Perfect for Docker/Kubernetes observability.
-* **Plug-and-play config**: Use the included config, or mount your own.
-* **Built for insecure HTTP**: Use behind any SSL-terminating reverse proxy (Caddy, Traefik, HAProxy, nginx, Cloudflare, etc.).
-* **SSL/TLS, HTTP/2, HTTP/3, gzip, and SSI**: Optional tags (`-ssl`, `-gzip`, `-ssi`, and `-upx` variants) for more features. The `-ssl` tags include HTTP/2 and HTTP/3 (QUIC) support.
+**Rootless (`-ssl-unprivileged`):** the full process tree runs as UID/GID 101. Non-root processes cannot bind ports below 1024, so use **8080** (HTTP) and **8443** (HTTPS/QUIC) inside the container—map with e.g. `-p 80:8080 -p 443:8443`. Writable runtime state (`pid`, temp paths) belongs under `/tmp`. Do not use a `user` directive. See [conf-unprivileged/nginx.conf](./conf-unprivileged/nginx.conf) for the bundled layout.
 
 ---
 
-## 🛡️ Intended Use
+## Size comparison
 
-* **NOT for direct SSL/public internet use by default!**
+Compressed pull sizes (Docker Hub, NGINX 1.31.1 line):
 
-  * The `-ssl` tags add built-in HTTPS, but it’s still recommended to use a reverse proxy for cert management.
-* *Ideal for:*
+| Platform | Official `nginx:1.31.1` | `nginx-micro:1.31.1-upx` | `nginx-micro:1.31.1` |
+| -------- | :-------------------: | :----------------------: | :------------------: |
+| amd64    | 60.18 MB | **462.89 KB** | 589.77 KB |
+| arm64    | 58.56 MB | **443.15 KB** | 603.78 KB |
+| arm/v7   | 50.03 MB | **449.94 KB** | 531.84 KB |
+| 386      | 60.53 MB | **477.52 KB** | 608.38 KB |
+| ppc64le  | 64.11 MB | **498 KB** | 656.53 KB |
+| s390x    | 57.84 MB | *N/A* | 646.7 KB |
+| riscv64  | 55.1 MB | *N/A* | 601.95 KB |
 
-  * Static sites and health checks
-  * PHP apps via FastCGI (`php-fpm`)
-  * Serving assets in microservices
-  * Demo, staging, CI pipelines
-  * Ultra-lightweight edge deployments
+Compared to official `nginx:1.31.1`, the UPX image is **up to 148× smaller** on amd64 (ratio varies by platform and variant). As a secondary baseline, `nginx:1.31.1-alpine-slim` is about 4.76–5.82 MB compressed; `nginx-micro:1.31.1` is roughly **7–11× smaller** than alpine-slim depending on platform.
 
 ---
 
-## 🏁 Quick Start
+## Quick start
 
-### **Serve static files from your current directory:**
+The bundled default config includes a PHP-FPM upstream. For **static files only**, mount a minimal config (below). Image reference: `tigersmile/nginx-micro` on Docker Hub.
+
+### Static HTTP
+
+Save as `nginx-static.conf`:
+
+```nginx
+worker_processes 1;
+error_log /dev/stdout;
+pid /nginx.pid;
+events { worker_connections 1024; }
+http {
+    access_log /dev/stdout;
+    server {
+        listen 80;
+        root /www;
+        index index.html;
+        location / { try_files $uri $uri/ /index.html; }
+    }
+}
+```
 
 ```sh
 docker run --rm -p 8080:80 \
-  -v $(pwd):/www \
-  tigersmile/nginx-micro
+  -v "$(pwd)/nginx-static.conf:/conf/nginx.conf:ro" \
+  -v "$(pwd):/www:ro" \
+  tigersmile/nginx-micro:latest
 ```
 
-Open [http://localhost:8080](http://localhost:8080) in your browser.
+Open [http://localhost:8080](http://localhost:8080).
 
----
-
-### **Mount your own `nginx.conf` for full control:**
+### Custom config (any variant)
 
 ```sh
 docker run --rm -p 8080:80 \
-  -v $(pwd)/nginx.conf:/conf/nginx.conf:ro \
-  -v $(pwd)/site:/www \
-  tigersmile/nginx-micro
+  -v "$(pwd)/nginx.conf:/conf/nginx.conf:ro" \
+  -v "$(pwd)/site:/www:ro" \
+  tigersmile/nginx-micro:latest
 ```
 
----
+### HTTPS (`-ssl` tags)
 
-### **Run fully unprivileged (`-ssl-unprivileged`):**
+Generate a self-signed certificate on the host, then mount config and certs. Full walkthrough: **[SSL.md](./SSL.md)**.
+
+```sh
+openssl req -x509 -newkey rsa:2048 -days 365 -nodes \
+  -keyout nginx.key -out nginx.crt -subj "/CN=localhost"
+
+docker run --rm -p 8443:443 \
+  -v "$(pwd)/nginx-ssl.conf:/conf/nginx.conf:ro" \
+  -v "$(pwd)/nginx.crt:/conf/nginx.crt:ro" \
+  -v "$(pwd)/nginx.key:/conf/nginx.key:ro" \
+  -v "$(pwd)/www:/www:ro" \
+  tigersmile/nginx-micro:ssl
+```
+
+For production TLS, we still recommend a reverse proxy or cert manager for renewal and policy; the `-ssl` tags are for when you want TLS inside the container.
+
+### Rootless HTTP (`-ssl-unprivileged`)
+
+Use the layout from [conf-unprivileged/nginx.conf](./conf-unprivileged/nginx.conf) (HTTP on 8080). Copy or adapt it locally:
 
 ```sh
 docker run --rm \
-  -p 80:8080 -p 443:8443 \
-  -v $(pwd)/nginx-unpriv.conf:/conf/nginx.conf:ro \
-  -v $(pwd)/www:/www:ro \
-  tigersmile/nginx-micro:1.31.1-ssl-unprivileged
+  -p 8080:8080 \
+  -v "$(pwd)/conf-unprivileged/nginx.conf:/conf/nginx.conf:ro" \
+  -v "$(pwd)/www:/www:ro" \
+  tigersmile/nginx-micro:ssl-unprivileged
 ```
 
-The unprivileged tags run as uid/gid `101:101` and expect:
-- `listen` on high ports (`8080`/`8443`)
-- no `user` directive
-- runtime-writable paths (`pid`, temp paths) under `/tmp`
+Add `listen 8443 ssl` and certificate paths for HTTPS on 8443 (see [SSL.md](./SSL.md)); map host 443 to 8443.
 
----
+### Rootless + read-only root filesystem
 
-### **Run unprivileged + read-only root filesystem:**
+Proven layout: writable `/tmp` via tmpfs with mode `1777` so UID 101 can write pid and temp files.
 
 ```sh
 docker run --rm \
   --read-only \
   --tmpfs /tmp:rw,mode=1777 \
-  -p 80:8080 -p 443:8443 \
-  -v $(pwd)/nginx-unpriv.conf:/conf/nginx.conf:ro \
-  -v $(pwd)/www:/www:ro \
-  tigersmile/nginx-micro:1.31.1-ssl-unprivileged
+  -p 8080:8080 \
+  -v "$(pwd)/conf-unprivileged/nginx.conf:/conf/nginx.conf:ro" \
+  -v "$(pwd)/www:/www:ro" \
+  tigersmile/nginx-micro:ssl-unprivileged
 ```
 
-Why this is required: in the unprivileged config, nginx writes `pid` and temp
-files under `/tmp`; with `--read-only`, `/tmp` must be provided as writable
-`tmpfs` (mode `1777`).
+### PHP-FPM (Compose)
 
----
-
-### **Use with PHP-FPM (e.g., WordPress/Drupal):**
+The default bundled config expects a `php-fpm` service on the Docker network:
 
 ```yaml
-# docker-compose.yml
 services:
   nginx:
-    image: tigersmile/nginx-micro
+    image: tigersmile/nginx-micro:latest
     ports:
       - "8080:80"
     volumes:
@@ -180,179 +169,116 @@ services:
       - ./www:/www
     depends_on:
       - php-fpm
-    networks: [ web ]
+    networks: [web]
   php-fpm:
     image: php:fpm
     volumes:
       - ./www:/www
-    networks: [ web ]
+    networks: [web]
 networks:
   web:
 ```
 
----
-
-### **Compose (unprivileged + read-only):**
+### Rootless + read-only (Compose)
 
 ```yaml
 services:
   nginx:
-    image: tigersmile/nginx-micro:1.31.1-ssl-unprivileged
+    image: tigersmile/nginx-micro:ssl-unprivileged
     read_only: true
     tmpfs:
       - /tmp:rw,mode=1777
     ports:
-      - "80:8080"
-      - "443:8443"
+      - "8080:8080"
     volumes:
-      - ./nginx-unpriv.conf:/conf/nginx.conf:ro
+      - ./conf-unprivileged/nginx.conf:/conf/nginx.conf:ro
       - ./www:/www:ro
 ```
 
 ---
 
-## 📝 Default nginx.conf
+## Verification
+
+After building or pulling images, run runtime checks locally:
+
+```sh
+./scripts/verify-images              # all variants (auto-detects local or Hub tags)
+./scripts/verify-images --variant ssl
+./scripts/verify-images --help
+```
+
+On each check-in, CI compiles every variant on eight platforms, then runs `verify-images` per variant on `linux/amd64`. Current tentpoles include: config syntax, process start, HTTP (or HTTPS for `-ssl` tags), gzip and SSI where applicable, unprivileged UID 101, and read-only unprivileged with tmpfs.
+
+Not yet covered by automated runtime tests: HTTP/2 and HTTP/3 negotiation, FastCGI with a live php-fpm, image size ratios, and per-platform runtime beyond amd64. Those modules are compiled into `-ssl` tags; see [SSL.md](./SSL.md) for manual HTTPS testing.
+
+---
+
+## Default bundled `nginx.conf`
+
+Privileged tags ship [conf/nginx.conf](./conf/nginx.conf): master starts as root (container default), workers run as `nginx` (UID 101), pid at `/nginx.pid`. Unprivileged tags ship [conf-unprivileged/nginx.conf](./conf-unprivileged/nginx.conf) with pid and temp paths under `/tmp`.
 
 ```nginx
 user  nginx;
 worker_processes  1;
-
 error_log  /dev/stdout;
 pid        /nginx.pid;
-
-events { worker_connections  1024; }
-
-http {
-    include       mime.types;
-    default_type  application/octet-stream;
-
-    log_format standard '$remote_addr - $remote_user [$time_local] "$request" '
-                        '$status $body_bytes_sent "$http_referer" '
-                        '"$http_user_agent" "$http_x_forwarded_for"';
-
-    access_log  /dev/stdout standard;
-
-    sendfile           on;
-    keepalive_timeout  65;
-
-    server {
-        listen       80 default_server;
-        server_name  _;
-
-        root   /www;
-        index  index.html index.php;
-
-        location / {
-            try_files $uri $uri/ =404;
-        }
-
-        # For PHP-FPM
-        location ~ \.php$ {
-            fastcgi_split_path_info ^(.+\.php)(/.+)$;
-            fastcgi_param HTTP_PROXY "";
-            fastcgi_pass   php-fpm:9000;
-            fastcgi_index  index.php;
-            include        fastcgi_params;
-        }
-    }
-}
+# … see conf/nginx.conf for the full file (static root, PHP-FPM location, stdout logs)
 ```
 
----
-
-## 🏷️ Tag and Feature Reference
-
-| Tag                | gzip | SSL/TLS | SSI | UPX | Description                  | Platforms     |
-| ------------------ | :--: | :-----: | :-: | :-: | ---------------------------- | ------------- |
-| `:1.31.1`          |   ❌  |    ❌    |  ❌  |  ❌  | Minimal HTTP only            | all           |
-| `:1.31.1-upx`      |   ❌  |    ❌    |  ❌  |  ✅  | Minimal HTTP, smallest size  | upx platforms |
-| `:1.31.1-gzip`     |   ✅  |    ❌    |  ❌  |  ❌  | gzip content-encoding        | all           |
-| `:1.31.1-gzip-upx` |   ✅  |    ❌    |  ❌  |  ✅  | gzip, smallest size          | upx platforms |
-| `:1.31.1-ssi`      |   ✅  |    ❌    |  ✅  |  ❌  | gzip, SSI                    | all           |
-| `:1.31.1-ssi-upx`  |   ✅  |    ❌    |  ✅  |  ✅  | gzip, SSI, smallest size     | upx platforms |
-| `:1.31.1-ssl`      |   ✅  |    ✅    |  ❌  |  ❌  | SSL/TLS, HTTP/2, HTTP/3, gzip            | all           |
-| `:1.31.1-ssl-upx`  |   ✅  |    ✅    |  ❌  |  ✅  | SSL/TLS, HTTP/2, HTTP/3, gzip, smallest  | upx platforms |
-| `:1.31.1-ssl-unprivileged` | ✅ | ✅ | ❌ | ❌ | Rootless SSL/TLS, HTTP/2, HTTP/3, gzip (UID 101, ports 8080/8443) | all |
-| `:1.31.1-ssl-unprivileged-upx` | ✅ | ✅ | ❌ | ✅ | Rootless SSL/TLS, HTTP/2, HTTP/3, gzip, smallest | upx platforms |
-
-**What’s a “UPX platform”?**
-Currently: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le` (but not `s390x` or `riscv64`).
+Mount your own file at `/conf/nginx.conf` to replace it entirely.
 
 ---
 
-## ⚙️ What’s Included / Not Included
+## Design notes
 
-| Feature             | Included? | Notes                               |
-| ------------------- | :-------: | ----------------------------------- |
-| Static file serving |     ✅     | `/www` is default root              |
-| FastCGI/PHP-FPM     |     ✅     | Use with `php-fpm` container        |
-| gzip                |  *varies* | Use a `-gzip`, `-ssi`, or `-ssl` tag |
-| SSL/TLS             |  *varies* | Use a `-ssl` tag                    |
-| HTTP/2              |  *varies* | Included in `-ssl` tags             |
-| HTTP/3 (QUIC)       |  *varies* | Included in `-ssl` tags             |
-| Proxy/Upstream      |  *varies* | Included in `-ssl` tags (by popular demand) |
-| realip              |     ✅     | Recover client IP behind a reverse proxy |
-| auth_request        |  *varies* | Included in `-ssl` tags                 |
-| SSI                 |  *varies* | Use a `-ssi` tag                    |
-| autoindex           |     ❌     | Not included                        |
-| Custom config       |     ✅     | Mount `/conf/nginx.conf`            |
-| Logs to stdout      |     ✅     | Container-native                    |
-| GPG-verified build  |     ✅     | Verified source integrity           |
+| Topic | Detail |
+| ----- | ------ |
+| Base image | `FROM scratch` — no shell, no package manager |
+| Source | GPG-verified nginx (and OpenSSL on `-ssl` builds) at build time |
+| Logs | Access and error logs to stdout/stderr |
+| HTTP only by default | Well suited behind Traefik, Caddy, cloud load balancers, etc. |
+| `-ssl` tags | TLS termination inside the container when you mount certs and config |
+| autoindex | Not included |
+| Multi-arch | Built via `docker-bake.hcl`; runtime verify currently amd64-only |
 
 ---
 
-## 🔒 Security Notes
+## Security
 
-* **Default tags run nginx master as root, workers as `nginx` (uid 101).**
-
-  * The image ships `/etc/passwd` and `/etc/group` defining `nginx` (uid/gid 101), and the default config uses `user nginx;`.
-  * The master process starts as root (the container's default user) so it can bind port 80/443, then nginx itself drops the workers to `nginx` — this is standard nginx behavior, not a container `USER` override.
-  * For fully rootless operation, use the dedicated `-ssl-unprivileged` tags (master + workers run as uid 101, ports `8080`/`8443`).
-* No shell or package manager—cannot be “container escaped” by shell exploits.
-* Statically linked, no interpreters, minimal attack surface.
-
-> **Note:**
-> Because the master runs as root by default, binding privileged ports (80/443) works out of the box on standard tags. If you want the whole process tree non-root, prefer the dedicated `-ssl-unprivileged` tags.
+- **Standard tags:** nginx master runs as root so it can bind 80/443; workers drop to UID 101 (`user nginx` in config). This is normal nginx behavior inside the container.
+- **`-ssl-unprivileged` tags:** entire tree runs as UID 101; use high ports and `/tmp` for writable paths.
+- **Reduced attack surface:** no shell or interpreter in the image; static binary only. Mount read-only configs and content where possible.
 
 ---
 
-## 🏗️ Building Yourself
-
-Requires Docker with Buildx and QEMU (for multi-arch):
+## Build locally
 
 ```sh
-docker buildx bake
+./build_all                          # tags nginx-micro:* on this machine
+docker buildx bake                 # multi-arch per docker-bake.hcl
+./scripts/verify-images              # after images exist
 ```
 
-*(Uses included `docker-bake.hcl` for all architectures and tags.)*
+Requires Docker Buildx; QEMU for cross-platform builds.
 
 ---
 
-## 📄 License
+## License
 
-Released under the [MIT License](./LICENSE). © 2025 James Dornan.
-
----
-
-## 🤝 Contribute & Contact
-
-* Issues and PRs welcome! [GitHub repo](https://github.com/tigersmile/nginx-micro)
-* Suggestions for features or new use-cases? Open an issue!
-* Show off your usage or share feedback—we want to hear from you!
+[MIT License](./LICENSE). © 2025 James Dornan.
 
 ---
 
-## 📣 Why not just use the official nginx image?
+## Community
 
-* **Ours is up to 148× smaller.**
-* **No shell, no bloat, no hidden dependencies.**
-* **Perfect for CI, health checks, microservices, edge, and cloud.**
+Issues and pull requests are welcome on [GitHub](https://github.com/tigersmile/nginx-micro). If nginx-micro helps your project, a star is appreciated.
 
 ---
 
-**Ultra-minimal nginx—secure, fast, tiny, everywhere.**
+## Why not the official nginx image?
 
----
+- **Up to 148× smaller** than official `nginx:1.31.1` (UPX variant, platform-dependent).
+- Minimal runtime: no distribution packages, no shell.
+- A good fit for CI, health checks, microservices, and edge deployments where every megabyte counts.
 
-*If you find this useful, star the repo, tell a friend, and help spread the word!*
-*(Project by [johnnyjoy](https://github.com/johnnyjoy).)*
+*Project by [johnnyjoy](https://github.com/johnnyjoy).*
