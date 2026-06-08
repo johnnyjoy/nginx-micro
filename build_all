@@ -15,7 +15,7 @@ ssi-upx:ssi-upx
 ssl:ssl
 ssl-upx:ssl-upx
 ssl-unprivileged:ssl-unprivileged
-ssl-upx-unprivileged:ssl-upx-unprivileged
+ssl-unprivileged-upx:ssl-unprivileged-upx
 "
 
 for line in $VARIANTS; do
