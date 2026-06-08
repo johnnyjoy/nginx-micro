@@ -60,15 +60,21 @@ Multiple image variants are published for different use cases.
 
 | Platform | Official nginx:1.31 | nginx-micro:1.31.1-upx | nginx-micro:1.31.1 |
 | -------- | :-----------------: | :--------------------: | :----------------: |
-| amd64    |       68.86 MB      |       **432 KB**       |       1.19 MB      |
-| arm64    |       65.54 MB      |       **423 KB**       |       1.17 MB      |
-| arm/v7   |       57.91 MB      |       **422 KB**       |       1.16 MB      |
-| 386      |       67.31 MB      |       **448 KB**       |       1.22 MB      |
-| ppc64le  |       73.34 MB      |       **457 KB**       |       1.26 MB      |
-| s390x    |       63.82 MB      |          *N/A*         |       1.36 MB      |
-| riscv64  |         N/A         |          *N/A*         |       1.30 MB      |
+| amd64    |       60.18 MB      |       **462.89 KB**    |       589.77 KB    |
+| arm64    |       58.56 MB      |       **443.15 KB**    |       603.78 KB    |
+| arm/v7   |       50.03 MB      |       **449.94 KB**    |       531.84 KB    |
+| 386      |       60.53 MB      |       **477.52 KB**    |       608.38 KB    |
+| ppc64le  |       64.11 MB      |       **498 KB**       |       656.53 KB    |
+| s390x    |       57.84 MB      |          *N/A*         |       646.7 KB     |
+| riscv64  |       55.1 MB       |          *N/A*         |       601.95 KB    |
 
-> That’s up to **160× smaller** than the official nginx images!
+> That’s up to **132× smaller** than the official nginx images.
+>
+> For reference, `nginx:1.31.1` is currently about `50.03 MB`-`64.11 MB` compressed.
+>
+> Secondary baseline: `nginx:1.31.1-alpine-slim` is about `4.76 MB`-`5.82 MB` compressed.
+> Against alpine-slim, `nginx-micro:1.31.1` is about **7.3x-10.9x smaller** and
+> `nginx-micro:1.31.1-upx` is about **9.6x-13.5x smaller**.
 
 ---
 
