@@ -40,7 +40,7 @@ Multiple image variants are published for different use cases.
 | `:1.31.1-ssl`      | HTTP, FastCGI, SSL/TLS, HTTP/2, HTTP/3, gzip |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | HTTPS, HTTP/2 & HTTP/3   |
 | `:1.31.1-ssl-upx`  | SSL/TLS, HTTP/2, HTTP/3, gzip, UPX-compressed |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | HTTPS/2/3, smallest      |
 | `:1.31.1-ssl-unprivileged`     | Same as `-ssl`, but runs **rootless** (UID 101, ports `8080`/`8443`) |    ✅    |   ✅  |  ❌  |        ❌       | All supported                                | Rootless HTTPS/2/3 + reverse proxy |
-| `:1.31.1-ssl-upx-unprivileged` | Rootless `-ssl`, UPX-compressed |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Rootless, smallest       |
+| `:1.31.1-ssl-unprivileged-upx` | Rootless `-ssl`, UPX-compressed |    ✅    |   ✅  |  ❌  |        ✅       | UPX platforms (see above)                    | Rootless, smallest       |
 
 <sup>†</sup> UPX-compressed images (`-upx` tags) are **not** built for `s390x` or `riscv64`, since UPX does not support them on Alpine.
 

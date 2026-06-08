@@ -1,8 +1,10 @@
 name: Build test (no publish)
 
-# Validates that every image variant still compiles on each push/PR, WITHOUT
-# pushing anything to a registry. Release publishing is handled separately by
-# release.yml (which runs only on version tags).
+# Validates that every image variant still compiles on EVERY target platform on
+# each push/PR, WITHOUT pushing anything to a registry. This mirrors the release
+# matrix (so arch-specific breakage like the riscv64 OpenSSL asm issue is caught
+# before tagging) but exports nothing. Publishing is handled by release.yml,
+# which runs only on version tags.
 
 on:
   push:
@@ -25,24 +27,65 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            slug: linux-amd64
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
+          - platform: linux/386
+            runner: ubuntu-latest
+            slug: linux-386
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            slug: linux-arm64
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
+          - platform: linux/arm/v7
+            runner: ubuntu-24.04-arm
+            slug: linux-arm-v7
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
+          - platform: linux/arm/v6
+            runner: ubuntu-24.04-arm
+            slug: linux-arm-v6
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
+          - platform: linux/ppc64le
+            runner: ubuntu-latest
+            slug: linux-ppc64le
+            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
+          # s390x and riscv64 are not in UPX_PLATFORMS, so skip the -upx targets.
+          - platform: linux/s390x
+            runner: ubuntu-latest
+            slug: linux-s390x
+            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl,nginx-ssl-unprivileged
+          - platform: linux/riscv64
+            runner: ubuntu-latest
+            slug: linux-riscv64
+            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl,nginx-ssl-unprivileged
     steps:
       - uses: actions/checkout@v4
 
+      - uses: docker/setup-qemu-action@v3
+
       - uses: docker/setup-buildx-action@v3
 
-      # Build the full default group (all variants, incl. unprivileged) natively
-      # on amd64. type=cacheonly runs the complete build but exports nothing, so
-      # nothing is loaded or pushed. GitHub Actions cache keeps reruns fast.
-      - name: Build all variants (amd64, no publish)
+      # type=cacheonly runs the full build for this platform but exports nothing
+      # (no load, no push). No registry credentials are needed, so this also runs
+      # on fork PRs. GitHub Actions cache (separate from the release cache) keeps
+      # reruns fast.
+      - name: Build ${{ matrix.platform }} (no publish)
         uses: docker/bake-action@v5
         env:
           BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
         with:
           files: docker-bake.hcl
-          targets: default
+          targets: ${{ matrix.targets }}
           set: |
-            *.platform=linux/amd64
+            *.platform=${{ matrix.platform }}
             *.output=type=cacheonly
-            *.cache-from=type=gha
-            *.cache-to=type=gha,mode=max
+            *.cache-from=type=gha,scope=buildtest-${{ matrix.slug }}
+            *.cache-to=type=gha,scope=buildtest-${{ matrix.slug }},mode=max

@@ -39,7 +39,7 @@ group "default" {
     "nginx-ssl",
     "nginx-ssl-upx",
     "nginx-ssl-unprivileged",
-    "nginx-ssl-upx-unprivileged"
+    "nginx-ssl-unprivileged-upx"
   ]
 }
 
@@ -127,15 +127,15 @@ target "nginx-ssl-unprivileged" {
   platforms = "${ALL_PLATFORMS}"
 }
 
-target "nginx-ssl-upx-unprivileged" {
+target "nginx-ssl-unprivileged-upx" {
   context = "."
   dockerfile = "Dockerfile"
-  target = "ssl-upx-unprivileged"
+  target = "ssl-unprivileged-upx"
   tags = [
-    "tigersmile/nginx-micro:${NGINX_VERSION}-ssl-upx-unprivileged",
-    "tigersmile/nginx-micro:ssl-upx-unprivileged",
-    "ghcr.io/johnnyjoy/nginx-micro:${NGINX_VERSION}-ssl-upx-unprivileged",
-    "ghcr.io/johnnyjoy/nginx-micro:ssl-upx-unprivileged"
+    "tigersmile/nginx-micro:${NGINX_VERSION}-ssl-unprivileged-upx",
+    "tigersmile/nginx-micro:ssl-unprivileged-upx",
+    "ghcr.io/johnnyjoy/nginx-micro:${NGINX_VERSION}-ssl-unprivileged-upx",
+    "ghcr.io/johnnyjoy/nginx-micro:ssl-unprivileged-upx"
   ]
   cache-from = [
     {

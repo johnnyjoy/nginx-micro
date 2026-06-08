@@ -535,7 +535,7 @@ EXPOSE 8443 8443/udp
 ################################################################################
 # FINAL Nginx SSL Unprivileged Upx
 ################################################################################
-FROM nginx-user-unprivileged AS ssl-upx-unprivileged
+FROM nginx-user-unprivileged AS ssl-unprivileged-upx
 
 COPY --from=build-ssl /nginx-upx /nginx
 
