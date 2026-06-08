@@ -131,6 +131,41 @@ docker run --rm -p 8080:80 \
 
 ---
 
+### **Run fully unprivileged (`-ssl-unprivileged`):**
+
+```sh
+docker run --rm \
+  -p 80:8080 -p 443:8443 \
+  -v $(pwd)/nginx-unpriv.conf:/conf/nginx.conf:ro \
+  -v $(pwd)/www:/www:ro \
+  tigersmile/nginx-micro:1.31.1-ssl-unprivileged
+```
+
+The unprivileged tags run as uid/gid `101:101` and expect:
+- `listen` on high ports (`8080`/`8443`)
+- no `user` directive
+- runtime-writable paths (`pid`, temp paths) under `/tmp`
+
+---
+
+### **Run unprivileged + read-only root filesystem:**
+
+```sh
+docker run --rm \
+  --read-only \
+  --tmpfs /tmp:rw,mode=1777 \
+  -p 80:8080 -p 443:8443 \
+  -v $(pwd)/nginx-unpriv.conf:/conf/nginx.conf:ro \
+  -v $(pwd)/www:/www:ro \
+  tigersmile/nginx-micro:1.31.1-ssl-unprivileged
+```
+
+Why this is required: in the unprivileged config, nginx writes `pid` and temp
+files under `/tmp`; with `--read-only`, `/tmp` must be provided as writable
+`tmpfs` (mode `1777`).
+
+---
+
 ### **Use with PHP-FPM (e.g., WordPress/Drupal):**
 
 ```yaml
@@ -153,6 +188,25 @@ services:
     networks: [ web ]
 networks:
   web:
+```
+
+---
+
+### **Compose (unprivileged + read-only):**
+
+```yaml
+services:
+  nginx:
+    image: tigersmile/nginx-micro:1.31.1-ssl-unprivileged
+    read_only: true
+    tmpfs:
+      - /tmp:rw,mode=1777
+    ports:
+      - "80:8080"
+      - "443:8443"
+    volumes:
+      - ./nginx-unpriv.conf:/conf/nginx.conf:ro
+      - ./www:/www:ro
 ```
 
 ---
@@ -218,6 +272,8 @@ http {
 | `:1.31.1-ssi-upx`  |   ✅  |    ❌    |  ✅  |  ✅  | gzip, SSI, smallest size     | upx platforms |
 | `:1.31.1-ssl`      |   ✅  |    ✅    |  ❌  |  ❌  | SSL/TLS, HTTP/2, HTTP/3, gzip            | all           |
 | `:1.31.1-ssl-upx`  |   ✅  |    ✅    |  ❌  |  ✅  | SSL/TLS, HTTP/2, HTTP/3, gzip, smallest  | upx platforms |
+| `:1.31.1-ssl-unprivileged` | ✅ | ✅ | ❌ | ❌ | Rootless SSL/TLS, HTTP/2, HTTP/3, gzip (UID 101, ports 8080/8443) | all |
+| `:1.31.1-ssl-unprivileged-upx` | ✅ | ✅ | ❌ | ✅ | Rootless SSL/TLS, HTTP/2, HTTP/3, gzip, smallest | upx platforms |
 
 **What’s a “UPX platform”?**
 Currently: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le` (but not `s390x` or `riscv64`).
@@ -247,16 +303,16 @@ Currently: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le` (but not `s390
 
 ## 🔒 Security Notes
 
-* **Worker processes drop to the unprivileged `nginx` user (uid 101).**
+* **Default tags run nginx master as root, workers as `nginx` (uid 101).**
 
   * The image ships `/etc/passwd` and `/etc/group` defining `nginx` (uid/gid 101), and the default config uses `user nginx;`.
   * The master process starts as root (the container's default user) so it can bind port 80/443, then nginx itself drops the workers to `nginx` — this is standard nginx behavior, not a container `USER` override.
-  * To run the **entire** process tree (including the master) as non-root, pass `--user 101:101`. In that case you must listen on an unprivileged port (≥1024), since a non-root master cannot bind 80/443.
+  * For fully rootless operation, use the dedicated `-ssl-unprivileged` tags (master + workers run as uid 101, ports `8080`/`8443`).
 * No shell or package manager—cannot be “container escaped” by shell exploits.
 * Statically linked, no interpreters, minimal attack surface.
 
 > **Note:**
-> Because the master runs as root by default, binding privileged ports (80/443) works out of the box. If you front this image with a reverse proxy, prefer running fully unprivileged with `--user 101:101` on a high port.
+> Because the master runs as root by default, binding privileged ports (80/443) works out of the box on standard tags. If you want the whole process tree non-root, prefer the dedicated `-ssl-unprivileged` tags.
 
 ---
 
@@ -288,7 +344,7 @@ Released under the [MIT License](./LICENSE). © 2025 James Dornan.
 
 ## 📣 Why not just use the official nginx image?
 
-* **Ours is up to 160× smaller.**
+* **Ours is up to 148× smaller.**
 * **No shell, no bloat, no hidden dependencies.**
 * **Perfect for CI, health checks, microservices, edge, and cloud.**
 
