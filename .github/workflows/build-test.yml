@@ -25,6 +25,9 @@ concurrency:
   group: build-test-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NGINX_VERSION: "1.31.1"
+
 jobs:
   build:
     name: build ${{ matrix.platform }}
@@ -89,3 +92,48 @@ jobs:
             *.output=type=cacheonly
             *.cache-from=type=gha,scope=buildtest-${{ matrix.slug }}
             *.cache-to=type=gha,scope=buildtest-${{ matrix.slug }},mode=max
+
+  # After the compile matrix, build each amd64 variant into Docker and run
+  # verify-images for that variant only. One job per tag = clear CI signal.
+  verify:
+    name: verify ${{ matrix.variant }}
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - micro
+          - micro-upx
+          - gzip
+          - gzip-upx
+          - ssi
+          - ssi-upx
+          - ssl
+          - ssl-upx
+          - ssl-unprivileged
+          - ssl-unprivileged-upx
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.variant }} (load locally)
+        uses: docker/bake-action@v5
+        env:
+          BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
+        with:
+          files: docker-bake.hcl
+          targets: nginx-${{ matrix.variant }}
+          set: |
+            *.platform=linux/amd64
+            *.output=type=docker
+            *.cache-from=type=gha,scope=buildtest-linux-amd64
+            *.cache-to=type=gha,scope=buildtest-linux-amd64,mode=max
+
+      - name: Verify ${{ matrix.variant }}
+        run: |
+          ./scripts/verify-images \
+            --variant "${{ matrix.variant }}" \
+            --version "${{ env.NGINX_VERSION }}" \
+            --prefix tigersmile/nginx-micro

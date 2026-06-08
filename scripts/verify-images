@@ -1,0 +1,350 @@
+#!/bin/sh
+# Tentpole runtime checks for every published nginx-micro image variant.
+# Proves: config syntax, process start, HTTP response, and key modules per tag.
+set -eu
+
+ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+VERSION=""
+REPO=""
+VARIANT=""
+READ_ONLY_UNPRIV=1
+
+fail() { echo "FAIL: $*" >&2; exit 1; }
+pass() { echo "PASS: $*"; }
+
+usage() {
+    cat <<'EOF'
+usage: verify-images [options]
+
+  --version VER     pin to versioned tags (e.g. 1.31.1, 1.31.1-gzip)
+                    omit to use rolling tags (latest, gzip, ssl, …)
+  --prefix REPO     image repository (optional; auto-detected if omitted)
+  --variant TAG     verify one variant only (micro, gzip, ssl, …)
+  --no-read-only    skip read-only unprivileged tentpole
+  -h, --help        show this help
+EOF
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --version)
+            [ $# -ge 2 ] || fail "--version requires a value"
+            VERSION="$2"
+            shift 2
+            ;;
+        --prefix)
+            [ $# -ge 2 ] || fail "--prefix requires a value"
+            REPO="$2"
+            shift 2
+            ;;
+        --variant)
+            [ $# -ge 2 ] || fail "--variant requires a value"
+            VARIANT="$2"
+            shift 2
+            ;;
+        --no-read-only)
+            READ_ONLY_UNPRIV=0
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
+done
+
+CONF_DIR="$ROOT/tests/verify/conf"
+WWW_DIR="$ROOT/tests/verify/www"
+CERT_DIR="$ROOT/tests/verify/certs"
+
+# Local builds (./build_all) tag nginx-micro:* ; bake/Hub use tigersmile/nginx-micro:* .
+resolve_repo() {
+    probe="$1"
+    for candidate in nginx-micro tigersmile/nginx-micro; do
+        if docker image inspect "${candidate}:${probe}" >/dev/null 2>&1; then
+            REPO="$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+pick_repo() {
+    if [ -n "$VERSION" ]; then
+        resolve_repo "$VERSION" && return 0
+        resolve_repo "${VERSION}-ssl" && return 0
+        fail "no images for version $VERSION (run ./build_all, pull from Hub, or pass --prefix)"
+    fi
+    resolve_repo "latest" || fail "no nginx-micro images found (run ./build_all, pull from Hub, or pass --prefix)"
+}
+
+if [ -z "$REPO" ]; then
+    pick_repo
+fi
+echo "==> images: ${REPO}"
+
+image_tag_for() {
+    tag="$1"
+    if [ -n "$VERSION" ]; then
+        case "$tag" in
+            micro) echo "$VERSION" ;;
+            micro-upx) echo "${VERSION}-upx" ;;
+            gzip) echo "${VERSION}-gzip" ;;
+            gzip-upx) echo "${VERSION}-gzip-upx" ;;
+            ssi) echo "${VERSION}-ssi" ;;
+            ssi-upx) echo "${VERSION}-ssi-upx" ;;
+            ssl) echo "${VERSION}-ssl" ;;
+            ssl-upx) echo "${VERSION}-ssl-upx" ;;
+            ssl-unprivileged) echo "${VERSION}-ssl-unprivileged" ;;
+            ssl-unprivileged-upx) echo "${VERSION}-ssl-unprivileged-upx" ;;
+            *) fail "unknown tag: $tag" ;;
+        esac
+    else
+        case "$tag" in
+            micro) echo "latest" ;;
+            micro-upx) echo "upx" ;;
+            gzip) echo "gzip" ;;
+            gzip-upx) echo "gzip-upx" ;;
+            ssi) echo "ssi" ;;
+            ssi-upx) echo "ssi-upx" ;;
+            ssl) echo "ssl" ;;
+            ssl-upx) echo "ssl-upx" ;;
+            ssl-unprivileged) echo "ssl-unprivileged" ;;
+            ssl-unprivileged-upx) echo "ssl-unprivileged-upx" ;;
+            *) fail "unknown tag: $tag" ;;
+        esac
+    fi
+}
+
+image_for() {
+    echo "${REPO}:$(image_tag_for "$1")"
+}
+
+needs_ssl_certs() {
+    case "$1" in
+        ssl|ssl-upx|ssl-unprivileged|ssl-unprivileged-upx) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+conf_for() {
+    tag="$1"
+    case "$tag" in
+        micro|micro-upx) echo "$CONF_DIR/nginx-micro.conf" ;;
+        ssl|ssl-upx) echo "$CONF_DIR/nginx-ssl.conf" ;;
+        gzip|gzip-upx) echo "$CONF_DIR/nginx-gzip.conf" ;;
+        ssi|ssi-upx) echo "$CONF_DIR/nginx-ssi.conf" ;;
+        ssl-unprivileged|ssl-unprivileged-upx) echo "$CONF_DIR/nginx-unpriv.conf" ;;
+        *) fail "unknown conf for: $tag" ;;
+    esac
+}
+
+port_for() {
+    tag="$1"
+    case "$tag" in
+        ssl-unprivileged|ssl-unprivileged-upx) echo "8080" ;;
+        *) echo "80" ;;
+    esac
+}
+
+wait_http() {
+    url="$1"
+    i=0
+    while [ "$i" -lt 50 ]; do
+        if curl -sf "$url" >/dev/null 2>&1; then
+            return 0
+        fi
+        i=$((i + 1))
+        sleep 0.2
+    done
+    return 1
+}
+
+wait_https() {
+    url="$1"
+    i=0
+    while [ "$i" -lt 50 ]; do
+        if curl -kf "$url" >/dev/null 2>&1; then
+            return 0
+        fi
+        i=$((i + 1))
+        sleep 0.2
+    done
+    return 1
+}
+
+assert_verify_body() {
+    url="$1"
+    insecure="$2"
+    if [ "$insecure" = "1" ]; then
+        curl -kf "$url" | grep -q "nginx-micro verify" || fail "unexpected body from $url"
+    else
+        curl -sf "$url" | grep -q "nginx-micro verify" || fail "unexpected body from $url"
+    fi
+}
+
+assert_modules() {
+    img="$1"
+    flag="$2"
+    if ! docker run --rm "$img" /nginx -V 2>&1 | grep -q -- "$flag"; then
+        docker run --rm "$img" /nginx -V 2>&1 | tail -5 >&2 || true
+        fail "$img missing configure flag: $flag"
+    fi
+}
+
+assert_module_absent() {
+    img="$1"
+    with_flag="$2"
+    if docker run --rm "$img" /nginx -V 2>&1 | grep -q -- "$with_flag"; then
+        fail "$img unexpectedly has configure flag: $with_flag"
+    fi
+}
+
+container_ip() {
+    name="$1"
+    docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$name"
+}
+
+run_variant() {
+    tag="$1"
+    img="$(image_for "$tag")"
+    conf="$(conf_for "$tag")"
+    port="$(port_for "$tag")"
+    name="nm-verify-${tag}"
+
+    docker image inspect "$img" >/dev/null 2>&1 || fail "image not found: $img (run ./build_all, bake, or pull first)"
+
+    echo "==> verify $tag"
+    if needs_ssl_certs "$tag"; then
+        docker run --rm \
+            -v "$conf:/conf/nginx.conf:ro" \
+            -v "$CERT_DIR/nginx.crt:/conf/nginx.crt:ro" \
+            -v "$CERT_DIR/nginx.key:/conf/nginx.key:ro" \
+            "$img" /nginx -t || fail "$tag: nginx -t"
+    else
+        docker run --rm \
+            -v "$conf:/conf/nginx.conf:ro" \
+            "$img" /nginx -t || fail "$tag: nginx -t"
+    fi
+
+    docker rm -f "$name" >/dev/null 2>&1 || true
+    if needs_ssl_certs "$tag"; then
+        docker run -d --name "$name" \
+            -v "$conf:/conf/nginx.conf:ro" \
+            -v "$CERT_DIR/nginx.crt:/conf/nginx.crt:ro" \
+            -v "$CERT_DIR/nginx.key:/conf/nginx.key:ro" \
+            -v "$WWW_DIR:/www:ro" \
+            "$img" >/dev/null
+    else
+        docker run -d --name "$name" \
+            -v "$conf:/conf/nginx.conf:ro" \
+            -v "$WWW_DIR:/www:ro" \
+            "$img" >/dev/null
+    fi
+
+    trap 'docker rm -f "$name" >/dev/null 2>&1 || true' INT TERM
+
+    ip="$(container_ip "$name")"
+    [ -n "$ip" ] || fail "$tag: container has no IP"
+
+    case "$tag" in
+        ssl|ssl-upx)
+            wait_https "https://${ip}:443/" || fail "$tag: HTTPS / did not respond"
+            assert_verify_body "https://${ip}:443/" 1
+            ;;
+        *)
+            wait_http "http://${ip}:${port}/" || fail "$tag: HTTP / did not respond"
+            assert_verify_body "http://${ip}:${port}/" 0
+            ;;
+    esac
+
+    case "$tag" in
+        gzip|gzip-upx)
+            assert_modules "$img" "--with-http_gzip_static_module"
+            if ! curl -sI -H "Accept-Encoding: gzip" "http://${ip}:${port}/big.txt" | grep -qi "content-encoding: gzip"; then
+                fail "$tag: gzip response header missing"
+            fi
+            ;;
+        ssi|ssi-upx)
+            body="$(curl -sf "http://${ip}:${port}/test.shtml")"
+            echo "$body" | grep -q '<!--#echo' && fail "$tag: SSI directive not processed"
+            ;;
+        ssl|ssl-upx)
+            assert_modules "$img" "--with-http_ssl_module"
+            assert_modules "$img" "--with-http_v2_module"
+            assert_modules "$img" "--with-http_v3_module"
+            ;;
+        micro|micro-upx)
+            assert_module_absent "$img" "--with-http_ssl_module"
+            assert_module_absent "$img" "--with-http_proxy_module"
+            assert_modules "$img" "--without-http_gzip_module"
+            ;;
+        ssl-unprivileged|ssl-unprivileged-upx)
+            assert_modules "$img" "--with-http_ssl_module"
+            user="$(docker inspect -f '{{.Config.User}}' "$name")"
+            [ "$user" = "101:101" ] || fail "$tag: expected USER 101:101, got $user"
+            wait_https "https://${ip}:8443/" || fail "$tag: HTTPS / did not respond"
+            assert_verify_body "https://${ip}:8443/" 1
+            ;;
+    esac
+
+    docker rm -f "$name" >/dev/null 2>&1 || true
+    trap - INT TERM
+    pass "$tag"
+}
+
+run_unpriv_readonly() {
+    [ "$READ_ONLY_UNPRIV" = "1" ] || return 0
+
+    tag="ssl-unprivileged"
+    img="$(image_for "$tag")"
+    conf="$(conf_for "$tag")"
+    name="nm-verify-ro"
+
+    echo "==> verify $tag (read-only rootfs)"
+    docker rm -f "$name" >/dev/null 2>&1 || true
+    docker run -d --name "$name" \
+        --read-only \
+        --tmpfs /tmp:rw,mode=1777 \
+        -v "$conf:/conf/nginx.conf:ro" \
+        -v "$CERT_DIR/nginx.crt:/conf/nginx.crt:ro" \
+        -v "$CERT_DIR/nginx.key:/conf/nginx.key:ro" \
+        -v "$WWW_DIR:/www:ro" \
+        "$img" >/dev/null
+
+    ip="$(container_ip "$name")"
+    [ -n "$ip" ] || fail "$tag read-only: container has no IP"
+    wait_http "http://${ip}:8080/" || fail "$tag read-only: HTTP / did not respond"
+    wait_https "https://${ip}:8443/" || fail "$tag read-only: HTTPS / did not respond"
+    docker rm -f "$name" >/dev/null 2>&1 || true
+    pass "$tag read-only"
+}
+
+ALL_VARIANTS="micro micro-upx gzip gzip-upx ssi ssi-upx ssl ssl-upx ssl-unprivileged ssl-unprivileged-upx"
+
+if [ -n "$VARIANT" ]; then
+    case " $ALL_VARIANTS " in
+        *" $VARIANT "*) ;;
+        *) fail "unknown variant: $VARIANT (expected one of: $ALL_VARIANTS)" ;;
+    esac
+    RUN_VARIANTS="$VARIANT"
+else
+    RUN_VARIANTS="$ALL_VARIANTS"
+fi
+
+for tag in $RUN_VARIANTS; do
+    run_variant "$tag"
+done
+
+if [ -z "$VARIANT" ] || [ "$VARIANT" = "ssl-unprivileged" ]; then
+    run_unpriv_readonly
+fi
+
+echo "ALL IMAGE CHECKS PASSED"
