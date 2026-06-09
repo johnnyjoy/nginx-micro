@@ -271,7 +271,7 @@ Requires Docker Buildx; QEMU for cross-platform builds.
 
 ## Community
 
-Issues and pull requests are welcome on [GitHub](https://github.com/tigersmile/nginx-micro). If nginx-micro helps your project, a star is appreciated.
+Issues and pull requests are welcome on [GitHub](https://github.com/johnnyjoy/nginx-micro). If nginx-micro helps your project, a star is appreciated.
 
 ---
 
