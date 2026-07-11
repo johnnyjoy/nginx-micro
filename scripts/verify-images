@@ -18,7 +18,7 @@ usage() {
     cat <<'EOF'
 usage: verify-images [options]
 
-  --version VER     pin to versioned tags (e.g. 1.31.1, 1.31.1-gzip)
+  --version VER     pin to versioned tags (e.g. 1.31.2, 1.31.2-gzip)
                     omit to use rolling tags (latest, gzip, ssl, …)
   --prefix REPO     image repository (optional; auto-detected if omitted)
   --variant TAG     verify one variant only (micro, gzip, ssl, …)

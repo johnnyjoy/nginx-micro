@@ -4,8 +4,8 @@
 # GLOBAL BUILD ARGS
 ################################################################################
 
-ARG NGINX_VERSION=1.31.1
-ARG OPENSSL_VERSION=4.0.0
+ARG NGINX_VERSION=1.31.2
+ARG OPENSSL_VERSION=4.0.1
 
 ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fuse-linker-plugin -Os -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -fstack-protector-strong -fPIE -Wno-cast-function-type -Wno-implicit-function-declaration"
 ARG LDFLAGS="-flto -fuse-linker-plugin -static-pie -s -Wl,--gc-sections -Wl,-z,relro -Wl,-z,now -Wl,--build-id=none"
@@ -30,8 +30,8 @@ COPY keys/ /tmp/keys/
 # OpenSSL: pin the SHA-256 AND verify the detached PGP signature against the
 # vendored OpenSSL release key. Update OPENSSL_CHECKSUM whenever OPENSSL_VERSION
 # changes (download the signed asset, verify, then `sha256sum`). The checksum
-# below is for OpenSSL 4.0.0.
-ARG OPENSSL_CHECKSUM="c32cf49a959c4f345f9606982dd36e7d28f7c58b19c2e25d75624d2b3d2f79ac"
+# below is for OpenSSL 4.0.1.
+ARG OPENSSL_CHECKSUM="2db3f3a0d6ea4b59e1f094ace2c8cd536dffb87cdc39084c5afa1e6f7f37dd09"
 ARG OPENSSL_GPG_FINGERPRINT="BA5473A2B0587B07FB27CF2D216094DFD0CB81EF"
 RUN set -eux; \
     wget -O openssl.tar.gz "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"; \
@@ -58,8 +58,8 @@ ARG NGINX_GPG_FINGERPRINTS="43387825DDB1BB97EC36BA5D007C8D7C15D87369 8540A6F1883
 # Pinned tarball SHA-256 for byte-for-byte reproducibility. MUST be updated
 # whenever NGINX_VERSION changes: download the signed release asset, verify its
 # PGP signature, then record `sha256sum nginx-<version>.tar.gz`. The value below
-# is for nginx 1.31.1. Set to "" to disable the checksum gate (not recommended).
-ARG NGINX_CHECKSUM="9fcaaeb8f22544b09a19a761f3412c4112215422401634bebdd1296a403cc4bc"
+# is for nginx 1.31.2. Set to "" to disable the checksum gate (not recommended).
+ARG NGINX_CHECKSUM="af2a957c41da636ddc4f883e4523c6d140b4784dbce42000c364ae5092aa473c"
 
 # nginx: download the official signed release ASSETS from the nginx GitHub
 # releases (NOT the /archive/ auto-generated tarballs, which have no .asc and
@@ -122,7 +122,7 @@ ENV TARGETARCH=${TARGETARCH}
 ARG TARGETPLATFORM
 ENV TARGETPLATFORM=${TARGETPLATFORM}
 
-# EXTRA_CONF carries per-arch Configure quirks. On riscv64, OpenSSL 4.0.0's MD5
+# EXTRA_CONF carries per-arch Configure quirks. On riscv64, OpenSSL 4.0.x's MD5
 # assembly glue (crypto/md5/md5_riscv.c) references the public MD5_CTX type, which
 # `no-deprecated` compiles out -> "unknown type name 'MD5_CTX'". Disabling asm on
 # riscv64 skips that broken glue (riscv64 is emulated/slow anyway, so the asm

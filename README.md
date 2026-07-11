@@ -25,20 +25,20 @@ UPX-compressed tags are not published for `s390x` or `riscv64` (UPX unavailable 
 
 ## Image tags
 
-Versioned tags use the NGINX release (e.g. `1.31.1`). Rolling aliases are also published: `latest`, `upx`, `gzip`, `ssl`, `ssl-unprivileged`, and corresponding `-upx` names.
+Versioned tags use the NGINX release (e.g. `1.31.2`). Rolling aliases are also published: `latest`, `upx`, `gzip`, `ssl`, `ssl-unprivileged`, and corresponding `-upx` names.
 
 | Tag | gzip | SSL/TLS | SSI | UPX | Platforms | Summary |
 | --- | :--: | :-----: | :-: | :-: | --------- | ------- |
-| `:1.31.1` / `:latest` | ❌ | ❌ | ❌ | ❌ | all | Smallest HTTP + FastCGI |
-| `:1.31.1-upx` / `:upx` | ❌ | ❌ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
-| `:1.31.1-gzip` / `:gzip` | ✅ | ❌ | ❌ | ❌ | all | gzip content-encoding |
-| `:1.31.1-gzip-upx` / `:gzip-upx` | ✅ | ❌ | ❌ | ✅ | UPX platforms† | gzip, smaller binary |
-| `:1.31.1-ssi` / `:ssi` | ✅ | ❌ | ✅ | ❌ | all | gzip + Server Side Includes |
-| `:1.31.1-ssi-upx` / `:ssi-upx` | ✅ | ❌ | ✅ | ✅ | UPX platforms† | SSI, smaller binary |
-| `:1.31.1-ssl` / `:ssl` | ✅ | ✅ | ❌ | ❌ | all | TLS, HTTP/2 & HTTP/3 modules, proxy, auth_request |
-| `:1.31.1-ssl-upx` / `:ssl-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
-| `:1.31.1-ssl-unprivileged` / `:ssl-unprivileged` | ✅ | ✅ | ❌ | ❌ | all | Rootless `-ssl` (UID 101, ports 8080/8443) |
-| `:1.31.1-ssl-unprivileged-upx` / `:ssl-unprivileged-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Rootless, smaller binary |
+| `:1.31.2` / `:latest` | ❌ | ❌ | ❌ | ❌ | all | Smallest HTTP + FastCGI |
+| `:1.31.2-upx` / `:upx` | ❌ | ❌ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
+| `:1.31.2-gzip` / `:gzip` | ✅ | ❌ | ❌ | ❌ | all | gzip content-encoding |
+| `:1.31.2-gzip-upx` / `:gzip-upx` | ✅ | ❌ | ❌ | ✅ | UPX platforms† | gzip, smaller binary |
+| `:1.31.2-ssi` / `:ssi` | ✅ | ❌ | ✅ | ❌ | all | gzip + Server Side Includes |
+| `:1.31.2-ssi-upx` / `:ssi-upx` | ✅ | ❌ | ✅ | ✅ | UPX platforms† | SSI, smaller binary |
+| `:1.31.2-ssl` / `:ssl` | ✅ | ✅ | ❌ | ❌ | all | TLS, HTTP/2 & HTTP/3 modules, proxy, auth_request |
+| `:1.31.2-ssl-upx` / `:ssl-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
+| `:1.31.2-ssl-unprivileged` / `:ssl-unprivileged` | ✅ | ✅ | ❌ | ❌ | all | Rootless `-ssl` (UID 101, ports 8080/8443) |
+| `:1.31.2-ssl-unprivileged-upx` / `:ssl-unprivileged-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Rootless, smaller binary |
 
 † UPX platforms: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le`.
 
@@ -50,7 +50,7 @@ Versioned tags use the NGINX release (e.g. `1.31.1`). Rolling aliases are also p
 
 ## Size comparison
 
-Compressed pull sizes (Docker Hub, NGINX 1.31.1 line):
+Compressed pull sizes from Docker Hub (measured on the **1.31.1** release; **1.31.2** is expected to be similar until remeasured after publish):
 
 | Platform | Official `nginx:1.31.1` | `nginx-micro:1.31.1-upx` | `nginx-micro:1.31.1` |
 | -------- | :-------------------: | :----------------------: | :------------------: |
@@ -62,7 +62,7 @@ Compressed pull sizes (Docker Hub, NGINX 1.31.1 line):
 | s390x    | 57.84 MB | *N/A* | 646.7 KB |
 | riscv64  | 55.1 MB | *N/A* | 601.95 KB |
 
-Compared to official `nginx:1.31.1`, the UPX image is **up to 148× smaller** on amd64 (ratio varies by platform and variant). As a secondary baseline, `nginx:1.31.1-alpine-slim` is about 4.76–5.82 MB compressed; `nginx-micro:1.31.1` is roughly **7–11× smaller** than alpine-slim depending on platform.
+Compared to official `nginx:1.31.1`, the UPX image is **up to 148× smaller** on amd64 (ratio varies by platform and variant). As a secondary baseline, `nginx:1.31.1-alpine-slim` is about 4.76–5.82 MB compressed; `nginx-micro` is roughly **7–11× smaller** than alpine-slim depending on platform.
 
 ---
 
@@ -277,7 +277,7 @@ Issues and pull requests are welcome on [GitHub](https://github.com/tigersmile/n
 
 ## Why not the official nginx image?
 
-- **Up to 148× smaller** than official `nginx:1.31.1` (UPX variant, platform-dependent).
+- **Up to 148× smaller** than official `nginx:1.31.1` (UPX variant, platform-dependent; sizes from the 1.31.1 Hub snapshot).
 - Minimal runtime: no distribution packages, no shell.
 - A good fit for CI, health checks, microservices, and edge deployments where every megabyte counts.
 

@@ -3,7 +3,7 @@ name: Release (build & push on tag)
 on:
   push:
     tags:
-      - "v*.*.*"     # Only runs on version tags like v1.31.1
+      - "v*.*.*"     # Only runs on version tags like v1.31.2
 
 permissions:
   contents: read
