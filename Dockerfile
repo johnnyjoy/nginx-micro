@@ -4,7 +4,7 @@
 # GLOBAL BUILD ARGS
 ################################################################################
 
-ARG NGINX_VERSION=1.31.2
+ARG NGINX_VERSION=1.31.3
 ARG OPENSSL_VERSION=4.0.1
 
 ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fuse-linker-plugin -Os -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -fstack-protector-strong -fPIE -Wno-cast-function-type -Wno-implicit-function-declaration"
@@ -58,8 +58,8 @@ ARG NGINX_GPG_FINGERPRINTS="43387825DDB1BB97EC36BA5D007C8D7C15D87369 8540A6F1883
 # Pinned tarball SHA-256 for byte-for-byte reproducibility. MUST be updated
 # whenever NGINX_VERSION changes: download the signed release asset, verify its
 # PGP signature, then record `sha256sum nginx-<version>.tar.gz`. The value below
-# is for nginx 1.31.2. Set to "" to disable the checksum gate (not recommended).
-ARG NGINX_CHECKSUM="af2a957c41da636ddc4f883e4523c6d140b4784dbce42000c364ae5092aa473c"
+# is for nginx 1.31.3. Set to "" to disable the checksum gate (not recommended).
+ARG NGINX_CHECKSUM="a7657c50811c2d92d9895395e8b873ef60398142c4db21eb647811c38f6dd525"
 
 # nginx: download the official signed release ASSETS from the nginx GitHub
 # releases (NOT the /archive/ auto-generated tarballs, which have no .asc and

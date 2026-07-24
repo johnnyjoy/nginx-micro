@@ -25,20 +25,20 @@ UPX-compressed tags are not published for `s390x` or `riscv64` (UPX unavailable 
 
 ## Image tags
 
-Versioned tags use the NGINX release (e.g. `1.31.2`). Rolling aliases are also published: `latest`, `upx`, `gzip`, `ssl`, `ssl-unprivileged`, and corresponding `-upx` names.
+Versioned tags use the NGINX release (e.g. `1.31.3`). Rolling aliases are also published: `latest`, `upx`, `gzip`, `ssl`, `ssl-unprivileged`, and corresponding `-upx` names.
 
 | Tag | gzip | SSL/TLS | SSI | UPX | Platforms | Summary |
 | --- | :--: | :-----: | :-: | :-: | --------- | ------- |
-| `:1.31.2` / `:latest` | ❌ | ❌ | ❌ | ❌ | all | Smallest HTTP + FastCGI |
-| `:1.31.2-upx` / `:upx` | ❌ | ❌ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
-| `:1.31.2-gzip` / `:gzip` | ✅ | ❌ | ❌ | ❌ | all | gzip content-encoding |
-| `:1.31.2-gzip-upx` / `:gzip-upx` | ✅ | ❌ | ❌ | ✅ | UPX platforms† | gzip, smaller binary |
-| `:1.31.2-ssi` / `:ssi` | ✅ | ❌ | ✅ | ❌ | all | gzip + Server Side Includes |
-| `:1.31.2-ssi-upx` / `:ssi-upx` | ✅ | ❌ | ✅ | ✅ | UPX platforms† | SSI, smaller binary |
-| `:1.31.2-ssl` / `:ssl` | ✅ | ✅ | ❌ | ❌ | all | TLS, HTTP/2 & HTTP/3 modules, proxy, auth_request |
-| `:1.31.2-ssl-upx` / `:ssl-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
-| `:1.31.2-ssl-unprivileged` / `:ssl-unprivileged` | ✅ | ✅ | ❌ | ❌ | all | Rootless `-ssl` (UID 101, ports 8080/8443) |
-| `:1.31.2-ssl-unprivileged-upx` / `:ssl-unprivileged-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Rootless, smaller binary |
+| `:1.31.3` / `:latest` | ❌ | ❌ | ❌ | ❌ | all | Smallest HTTP + FastCGI |
+| `:1.31.3-upx` / `:upx` | ❌ | ❌ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
+| `:1.31.3-gzip` / `:gzip` | ✅ | ❌ | ❌ | ❌ | all | gzip content-encoding |
+| `:1.31.3-gzip-upx` / `:gzip-upx` | ✅ | ❌ | ❌ | ✅ | UPX platforms† | gzip, smaller binary |
+| `:1.31.3-ssi` / `:ssi` | ✅ | ❌ | ✅ | ❌ | all | gzip + Server Side Includes |
+| `:1.31.3-ssi-upx` / `:ssi-upx` | ✅ | ❌ | ✅ | ✅ | UPX platforms† | SSI, smaller binary |
+| `:1.31.3-ssl` / `:ssl` | ✅ | ✅ | ❌ | ❌ | all | TLS, HTTP/2 & HTTP/3 modules, proxy, auth_request |
+| `:1.31.3-ssl-upx` / `:ssl-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Same, smaller binary |
+| `:1.31.3-ssl-unprivileged` / `:ssl-unprivileged` | ✅ | ✅ | ❌ | ❌ | all | Rootless `-ssl` (UID 101, ports 8080/8443) |
+| `:1.31.3-ssl-unprivileged-upx` / `:ssl-unprivileged-upx` | ✅ | ✅ | ❌ | ✅ | UPX platforms† | Rootless, smaller binary |
 
 † UPX platforms: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le`.
 
@@ -50,7 +50,7 @@ Versioned tags use the NGINX release (e.g. `1.31.2`). Rolling aliases are also p
 
 ## Size comparison
 
-Compressed pull sizes from Docker Hub (measured on the **1.31.1** release; **1.31.2** is expected to be similar until remeasured after publish):
+Compressed pull sizes from Docker Hub (measured on the **1.31.1** release; **1.31.3** is expected to be similar until remeasured after publish):
 
 | Platform | Official `nginx:1.31.1` | `nginx-micro:1.31.1-upx` | `nginx-micro:1.31.1` |
 | -------- | :-------------------: | :----------------------: | :------------------: |
