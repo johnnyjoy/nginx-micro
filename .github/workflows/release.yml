@@ -73,6 +73,10 @@ jobs:
           # which the merge step can combine cleanly. (buildx has no settable
           # `*.provenance` bake key in this version.)
           BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
+          # Keep only digests in the bake metadata output. The provenance record
+          # embeds git/GitHub context (~2 MB in CI), far over the 128 KB limit
+          # for the single env var the digest-export step reads it from.
+          BUILDX_METADATA_PROVENANCE: disabled
         with:
           files: docker-bake.hcl
           targets: ${{ matrix.targets }}
@@ -93,6 +97,7 @@ jobs:
         run: |
           mkdir -p digests
           printf '%s' "$METADATA" > metadata.json
+          echo "metadata: $(wc -c < metadata.json) bytes"
           # bake metadata is keyed by target name; keep only entries that produced
           # an image digest (ignores buildx.* informational keys).
           jq -r 'to_entries[]
