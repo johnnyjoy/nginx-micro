@@ -85,8 +85,8 @@ jobs:
             *.args.NGINX_VERSION=${{ needs.prepare.outputs.version }}
             *.tags=
             *.output=type=image,"name=tigersmile/nginx-micro,ghcr.io/johnnyjoy/nginx-micro",push-by-digest=true,name-canonical=true,push=true
-            *.cache-from=type=registry,ref=tigersmile/nginx-micro-cache:${{ matrix.slug }}
-            *.cache-to=type=registry,ref=tigersmile/nginx-micro-cache:${{ matrix.slug }},mode=max
+            *.cache-from=type=registry,ref=ghcr.io/johnnyjoy/nginx-micro-cache:${{ matrix.slug }}
+            *.cache-to=type=registry,ref=ghcr.io/johnnyjoy/nginx-micro-cache:${{ matrix.slug }},mode=max
 
       - name: Export per-target digests
         env:
@@ -148,7 +148,20 @@ jobs:
           NGINX_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -euo pipefail
-          SRC_REPO="tigersmile/nginx-micro"   # blobs were pushed to both repos; use one as the digest source
+          # Every platform image was pushed by digest to BOTH registries, so read
+          # the sources from GHCR: Docker Hub manifest reads count against the
+          # account's hourly pull limit (each release reads ~80), pushes do not.
+          SRC_REPO="ghcr.io/johnnyjoy/nginx-micro"
+          # Registries return transient 5xx/429s; every create is idempotent.
+          retry() {
+            n=1
+            until "$@"; do
+              [ "$n" -ge 4 ] && return 1
+              echo "::warning::attempt ${n} failed; retrying in $((n * 30))s"
+              sleep $((n * 30))
+              n=$((n + 1))
+            done
+          }
           targets=$(docker buildx bake -f docker-bake.hcl --print 2>/dev/null | jq -r '.group.default.targets[]')
           for target in $targets; do
             # Collect this variant's digests from every platform that built it.
@@ -163,7 +176,7 @@ jobs:
             src_args=()
             for d in "${digs[@]}"; do src_args+=("${SRC_REPO}@${d}"); done
             echo "==> ${target}: ${#digs[@]} platforms -> $(printf '%s ' "${tag_args[@]}")"
-            docker buildx imagetools create "${tag_args[@]}" "${src_args[@]}"
+            retry docker buildx imagetools create "${tag_args[@]}" "${src_args[@]}"
           done
 
       - name: Inspect published manifests
