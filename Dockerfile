@@ -91,7 +91,7 @@ RUN set -eux; \
     tar xzf nginx.tar.gz -C nginx --strip-components=1
 
 ################################################################################
-# BUILD DEPS: all static, pcre2, zlib, upx (for optional)
+# BUILD DEPS: all static, pcre2, zlib
 ################################################################################
 FROM ${ALPINE_IMAGE} AS build-deps
 
@@ -103,8 +103,6 @@ ARG LDFLAGS
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
     apk add --no-cache gcc musl-dev linux-headers make binutils wget gnupg \
       pcre2-dev pcre2-static zlib-dev zlib-static perl
-
-RUN apk add upx || true
 
 COPY --from=fetch /build /build
 
@@ -416,20 +414,21 @@ RUN ./configure \
 ################################################################################
 # UPX: compress each binary in its own stage so the plain images never wait on
 # (or lose cache to) compression. --best --lzma is within ~0.5% of
-# --ultra-brute's size at a small fraction of its time. Platforms without UPX
-# (s390x, riscv64) fall back to the uncompressed binary.
+# --ultra-brute's size at a small fraction of its time.
+# These stages are only built for UPX_PLATFORMS in docker-bake.hcl. There is no
+# fallback: a -upx image is always really compressed, or the build fails.
 ################################################################################
 FROM build-micro AS upx-micro
-RUN upx --best --lzma /nginx -o /nginx-upx || cp /nginx /nginx-upx
+RUN apk add --no-cache upx && upx --best --lzma /nginx -o /nginx-upx
 
 FROM build-gzip AS upx-gzip
-RUN upx --best --lzma /nginx -o /nginx-upx || cp /nginx /nginx-upx
+RUN apk add --no-cache upx && upx --best --lzma /nginx -o /nginx-upx
 
 FROM build-ssi AS upx-ssi
-RUN upx --best --lzma /nginx -o /nginx-upx || cp /nginx /nginx-upx
+RUN apk add --no-cache upx && upx --best --lzma /nginx -o /nginx-upx
 
 FROM build-ssl AS upx-ssl
-RUN upx --best --lzma /nginx -o /nginx-upx || cp /nginx /nginx-upx
+RUN apk add --no-cache upx && upx --best --lzma /nginx -o /nginx-upx
 
 ################################################################################
 # SKELETON: a writable /tmp owned by uid 101 for the unprivileged variants.

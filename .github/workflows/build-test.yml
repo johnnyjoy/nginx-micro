@@ -29,46 +29,30 @@ env:
   NGINX_VERSION: "1.31.8"
 
 jobs:
+  # Build/verify matrices come from docker-bake.hcl (scripts/ci-matrix), so the
+  # platform list and which platforms get -upx targets live in one place.
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.gen.outputs.build }}
+      verify: ${{ steps.gen.outputs.verify }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - id: gen
+        run: |
+          build="$(scripts/ci-matrix build)"
+          verify="$(scripts/ci-matrix verify)"
+          echo "build=${build}" >> "$GITHUB_OUTPUT"
+          echo "verify=${verify}" >> "$GITHUB_OUTPUT"
+
   build:
     name: build ${{ matrix.platform }}
+    needs: matrix
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - platform: linux/amd64
-            runner: ubuntu-latest
-            slug: linux-amd64
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          - platform: linux/386
-            runner: ubuntu-latest
-            slug: linux-386
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
-            slug: linux-arm64
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          - platform: linux/arm/v7
-            runner: ubuntu-24.04-arm
-            slug: linux-arm-v7
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          - platform: linux/arm/v6
-            runner: ubuntu-24.04-arm
-            slug: linux-arm-v6
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          - platform: linux/ppc64le
-            runner: ubuntu-latest
-            slug: linux-ppc64le
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          # s390x and riscv64 are not in UPX_PLATFORMS, so skip the -upx targets.
-          - platform: linux/s390x
-            runner: ubuntu-latest
-            slug: linux-s390x
-            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl,nginx-ssl-unprivileged
-          - platform: linux/riscv64
-            runner: ubuntu-latest
-            slug: linux-riscv64
-            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl,nginx-ssl-unprivileged
+      matrix: ${{ fromJSON(needs.matrix.outputs.build) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -93,32 +77,23 @@ jobs:
             *.cache-from=type=gha,scope=buildtest-${{ matrix.slug }}
             *.cache-to=type=gha,scope=buildtest-${{ matrix.slug }},mode=max
 
-  # After the compile matrix, build each amd64 variant into Docker and run
-  # verify-images for that variant only. One job per tag = clear CI signal.
+  # After the compile matrix, load each platform/variant image into Docker and
+  # run verify-images against it. One job per (platform, tag) = clear CI signal.
   verify:
-    name: verify ${{ matrix.variant }}
-    needs: build
-    runs-on: ubuntu-latest
+    name: verify ${{ matrix.platform }} ${{ matrix.variant }}
+    needs: [matrix, build]
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      matrix:
-        variant:
-          - micro
-          - micro-upx
-          - gzip
-          - gzip-upx
-          - ssi
-          - ssi-upx
-          - ssl
-          - ssl-upx
-          - ssl-unprivileged
-          - ssl-unprivileged-upx
+      matrix: ${{ fromJSON(needs.matrix.outputs.verify) }}
     steps:
       - uses: actions/checkout@v4
 
+      - uses: docker/setup-qemu-action@v3
+
       - uses: docker/setup-buildx-action@v3
 
-      - name: Build ${{ matrix.variant }} (load locally)
+      - name: Build ${{ matrix.variant }} for ${{ matrix.platform }} (load locally)
         uses: docker/bake-action@v5
         env:
           BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
@@ -126,14 +101,14 @@ jobs:
           files: docker-bake.hcl
           targets: nginx-${{ matrix.variant }}
           set: |
-            *.platform=linux/amd64
+            *.platform=${{ matrix.platform }}
             *.output=type=docker
-            *.cache-from=type=gha,scope=buildtest-linux-amd64
-            *.cache-to=type=gha,scope=buildtest-linux-amd64,mode=max
+            *.cache-from=type=gha,scope=buildtest-${{ matrix.slug }}
 
-      - name: Verify ${{ matrix.variant }}
+      - name: Verify ${{ matrix.variant }} on ${{ matrix.platform }}
         run: |
           ./scripts/verify-images \
             --variant "${{ matrix.variant }}" \
+            --platform "${{ matrix.platform }}" \
             --version "${{ env.NGINX_VERSION }}" \
             --prefix tigersmile/nginx-micro

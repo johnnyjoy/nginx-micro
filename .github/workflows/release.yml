@@ -19,7 +19,19 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.TAG }}
+      matrix: ${{ steps.matrix.outputs.build }}
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Per-platform target lists come from docker-bake.hcl (scripts/ci-matrix).
+      - name: Build matrix
+        id: matrix
+        run: |
+          build="$(scripts/ci-matrix build)"
+          echo "build=${build}" >> "$GITHUB_OUTPUT"
+
       - name: Extract version/tag
         id: version
         run: |
@@ -31,45 +43,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # Native x86 runner.
-          - platform: linux/amd64
-            runner: ubuntu-latest
-            slug: linux-amd64
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          # Emulated, but lightweight, on x86.
-          - platform: linux/386
-            runner: ubuntu-latest
-            slug: linux-386
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          # Native ARM runner (arm64 native; arm/v7 + arm/v6 emulate cheaply on ARM).
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
-            slug: linux-arm64
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          - platform: linux/arm/v7
-            runner: ubuntu-24.04-arm
-            slug: linux-arm-v7
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          - platform: linux/arm/v6
-            runner: ubuntu-24.04-arm
-            slug: linux-arm-v6
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          # Emulated on x86 (no native runners available).
-          - platform: linux/ppc64le
-            runner: ubuntu-latest
-            slug: linux-ppc64le
-            targets: nginx-micro,nginx-micro-upx,nginx-gzip,nginx-gzip-upx,nginx-ssi,nginx-ssi-upx,nginx-ssl,nginx-ssl-upx,nginx-ssl-unprivileged,nginx-ssl-unprivileged-upx
-          # s390x and riscv64 are not in UPX_PLATFORMS, so skip the -upx targets.
-          - platform: linux/s390x
-            runner: ubuntu-latest
-            slug: linux-s390x
-            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl,nginx-ssl-unprivileged
-          - platform: linux/riscv64
-            runner: ubuntu-latest
-            slug: linux-riscv64
-            targets: nginx-micro,nginx-gzip,nginx-ssi,nginx-ssl,nginx-ssl-unprivileged
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
 
