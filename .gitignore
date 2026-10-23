@@ -1,0 +1,20 @@
+# AI assistant / agent tooling (local, not part of the project)
+.cursor/
+.cursorrules
+.cursorignore
+.claude/
+CLAUDE.local.md
+memory-bank/
+.aider*
+.continue/
+.codeium/
+.windsurf/
+.windsurfrules
+.copilot/
+.github/copilot-instructions.md
+.roo/
+.clinerules
+.taskmaster/
+.mcp.json
+.jcodemunch/
+.sentrux/

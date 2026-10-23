@@ -9,6 +9,7 @@ cd "$ROOT"
 VERSION=""
 REPO=""
 VARIANT=""
+PLATFORM=""
 READ_ONLY_UNPRIV=1
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -18,10 +19,12 @@ usage() {
     cat <<'EOF'
 usage: verify-images [options]
 
-  --version VER     pin to versioned tags (e.g. 1.31.3, 1.31.3-gzip)
+  --version VER     pin to versioned tags (e.g. 1.31.8, 1.31.8-gzip)
                     omit to use rolling tags (latest, gzip, ssl, …)
   --prefix REPO     image repository (optional; auto-detected if omitted)
   --variant TAG     verify one variant only (micro, gzip, ssl, …)
+  --platform PLAT   run images for PLAT (e.g. linux/arm64); non-native
+                    platforms need QEMU binfmt and get longer start timeouts
   --no-read-only    skip read-only unprivileged tentpole
   -h, --help        show this help
 EOF
@@ -44,6 +47,11 @@ while [ $# -gt 0 ]; do
             VARIANT="$2"
             shift 2
             ;;
+        --platform)
+            [ $# -ge 2 ] || fail "--platform requires a value"
+            PLATFORM="$2"
+            shift 2
+            ;;
         --no-read-only)
             READ_ONLY_UNPRIV=0
             shift
@@ -59,6 +67,14 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+# Every container start goes through drun so --platform applies uniformly.
+drun() {
+    docker run ${PLATFORM:+--platform "$PLATFORM"} "$@"
+}
+
+# Startup polls: 10s native; emulated (QEMU) startup can be far slower.
+if [ -n "$PLATFORM" ]; then WAIT_TRIES=300; else WAIT_TRIES=50; fi
 
 CONF_DIR="$ROOT/tests/verify/conf"
 WWW_DIR="$ROOT/tests/verify/www"
@@ -157,7 +173,7 @@ port_for() {
 wait_http() {
     url="$1"
     i=0
-    while [ "$i" -lt 50 ]; do
+    while [ "$i" -lt "$WAIT_TRIES" ]; do
         if curl -sf "$url" >/dev/null 2>&1; then
             return 0
         fi
@@ -170,7 +186,7 @@ wait_http() {
 wait_https() {
     url="$1"
     i=0
-    while [ "$i" -lt 50 ]; do
+    while [ "$i" -lt "$WAIT_TRIES" ]; do
         if curl -kf "$url" >/dev/null 2>&1; then
             return 0
         fi
@@ -193,8 +209,8 @@ assert_verify_body() {
 assert_modules() {
     img="$1"
     flag="$2"
-    if ! docker run --rm "$img" /nginx -V 2>&1 | grep -q -- "$flag"; then
-        docker run --rm "$img" /nginx -V 2>&1 | tail -5 >&2 || true
+    if ! drun --rm "$img" /nginx -V 2>&1 | grep -q -- "$flag"; then
+        drun --rm "$img" /nginx -V 2>&1 | tail -5 >&2 || true
         fail "$img missing configure flag: $flag"
     fi
 }
@@ -202,7 +218,7 @@ assert_modules() {
 assert_module_absent() {
     img="$1"
     with_flag="$2"
-    if docker run --rm "$img" /nginx -V 2>&1 | grep -q -- "$with_flag"; then
+    if drun --rm "$img" /nginx -V 2>&1 | grep -q -- "$with_flag"; then
         fail "$img unexpectedly has configure flag: $with_flag"
     fi
 }
@@ -223,27 +239,27 @@ run_variant() {
 
     echo "==> verify $tag"
     if needs_ssl_certs "$tag"; then
-        docker run --rm \
+        drun --rm \
             -v "$conf:/conf/nginx.conf:ro" \
             -v "$CERT_DIR/nginx.crt:/conf/nginx.crt:ro" \
             -v "$CERT_DIR/nginx.key:/conf/nginx.key:ro" \
             "$img" /nginx -t || fail "$tag: nginx -t"
     else
-        docker run --rm \
+        drun --rm \
             -v "$conf:/conf/nginx.conf:ro" \
             "$img" /nginx -t || fail "$tag: nginx -t"
     fi
 
     docker rm -f "$name" >/dev/null 2>&1 || true
     if needs_ssl_certs "$tag"; then
-        docker run -d --name "$name" \
+        drun -d --name "$name" \
             -v "$conf:/conf/nginx.conf:ro" \
             -v "$CERT_DIR/nginx.crt:/conf/nginx.crt:ro" \
             -v "$CERT_DIR/nginx.key:/conf/nginx.key:ro" \
             -v "$WWW_DIR:/www:ro" \
             "$img" >/dev/null
     else
-        docker run -d --name "$name" \
+        drun -d --name "$name" \
             -v "$conf:/conf/nginx.conf:ro" \
             -v "$WWW_DIR:/www:ro" \
             "$img" >/dev/null
@@ -280,6 +296,9 @@ run_variant() {
             assert_modules "$img" "--with-http_ssl_module"
             assert_modules "$img" "--with-http_v2_module"
             assert_modules "$img" "--with-http_v3_module"
+            assert_module_absent "$img" "--without-http_upstream_keepalive_module"
+            curl -skf "https://${ip}:443/proxied/index.html" >/dev/null \
+                || fail "$tag: proxy through keepalive upstream failed"
             ;;
         micro|micro-upx)
             assert_module_absent "$img" "--with-http_ssl_module"
@@ -288,6 +307,7 @@ run_variant() {
             ;;
         ssl-unprivileged|ssl-unprivileged-upx)
             assert_modules "$img" "--with-http_ssl_module"
+            assert_module_absent "$img" "--without-http_upstream_keepalive_module"
             user="$(docker inspect -f '{{.Config.User}}' "$name")"
             [ "$user" = "101:101" ] || fail "$tag: expected USER 101:101, got $user"
             wait_https "https://${ip}:8443/" || fail "$tag: HTTPS / did not respond"
@@ -310,7 +330,7 @@ run_unpriv_readonly() {
 
     echo "==> verify $tag (read-only rootfs)"
     docker rm -f "$name" >/dev/null 2>&1 || true
-    docker run -d --name "$name" \
+    drun -d --name "$name" \
         --read-only \
         --tmpfs /tmp:rw,mode=1777 \
         -v "$conf:/conf/nginx.conf:ro" \

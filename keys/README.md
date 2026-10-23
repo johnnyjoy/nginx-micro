@@ -26,7 +26,8 @@ malicious tarball and a matching key.
 
 | File          | Owner                            | Primary key fingerprint                    |
 | ------------- | -------------------------------- | ------------------------------------------ |
-| `openssl.key` | OpenSSL <openssl@openssl.org>    | `BA5473A2B0587B07FB27CF2D216094DFD0CB81EF` |
+| `openssl.key` | OpenSSL <openssl@openssl.org>    | `B146647E45A7B33947AB226B2A2C87D161692D40` |
+| `openssl-legacy.key` | OpenSSL (retired; releases ≤ 4.0.2) | `BA5473A2B0587B07FB27CF2D216094DFD0CB81EF` |
 
 ## How these were obtained
 
@@ -38,13 +39,19 @@ for k in arut nginx_signing pluknet sb thresh; do
 done
 ```
 
-OpenSSL key — the key that signed recent releases (issuer of
-`openssl-<version>.tar.gz.asc`), fetched by fingerprint:
+OpenSSL key — the current signing certificate. Releases from 4.0.3 (Sep 2026)
+on are signed by its subkey `C46ED3F2CBEFDA1FDAADA44264ED7B1DCCE71CB2`. The
+primary fingerprint matches <https://openssl-library.org/source/> and
+`doc/fingerprints.txt` in the OpenSSL repo. Fetched by fingerprint:
 
 ```sh
 wget -O keys/openssl.key \
-  "https://keys.openpgp.org/vks/v1/by-fingerprint/BA5473A2B0587B07FB27CF2D216094DFD0CB81EF"
+  "https://keys.openpgp.org/vks/v1/by-fingerprint/B146647E45A7B33947AB226B2A2C87D161692D40"
 ```
+
+`openssl-legacy.key` (`BA5473A2…D0CB81EF`) is the retired key that signed
+earlier releases. It is kept only for verifying old tarballs and is not
+imported by the build.
 
 ## Verifying / refreshing
 
