@@ -18,7 +18,7 @@ usage() {
     cat <<'EOF'
 usage: verify-images [options]
 
-  --version VER     pin to versioned tags (e.g. 1.31.3, 1.31.3-gzip)
+  --version VER     pin to versioned tags (e.g. 1.31.8, 1.31.8-gzip)
                     omit to use rolling tags (latest, gzip, ssl, …)
   --prefix REPO     image repository (optional; auto-detected if omitted)
   --variant TAG     verify one variant only (micro, gzip, ssl, …)
@@ -280,6 +280,9 @@ run_variant() {
             assert_modules "$img" "--with-http_ssl_module"
             assert_modules "$img" "--with-http_v2_module"
             assert_modules "$img" "--with-http_v3_module"
+            assert_module_absent "$img" "--without-http_upstream_keepalive_module"
+            curl -skf "https://${ip}:443/proxied/index.html" >/dev/null \
+                || fail "$tag: proxy through keepalive upstream failed"
             ;;
         micro|micro-upx)
             assert_module_absent "$img" "--with-http_ssl_module"
@@ -288,6 +291,7 @@ run_variant() {
             ;;
         ssl-unprivileged|ssl-unprivileged-upx)
             assert_modules "$img" "--with-http_ssl_module"
+            assert_module_absent "$img" "--without-http_upstream_keepalive_module"
             user="$(docker inspect -f '{{.Config.User}}' "$name")"
             [ "$user" = "101:101" ] || fail "$tag: expected USER 101:101, got $user"
             wait_https "https://${ip}:8443/" || fail "$tag: HTTPS / did not respond"

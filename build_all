@@ -2,7 +2,7 @@
 set -eu
 
 # Set your version here, or pass VERSION=... in env.
-VERSION="${VERSION:-1.31.3}"
+VERSION="${VERSION:-1.31.8}"
 
 # List of build targets and their short tag (if any)
 VARIANTS="

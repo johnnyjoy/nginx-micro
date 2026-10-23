@@ -1,5 +1,5 @@
 variable "NGINX_VERSION" {
-  default = "1.31.3"
+  default = "1.31.8"
 }
 
 # UPX-supported platforms (based on Alpine's package availability)

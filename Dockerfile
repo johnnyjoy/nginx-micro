@@ -4,16 +4,23 @@
 # GLOBAL BUILD ARGS
 ################################################################################
 
-ARG NGINX_VERSION=1.31.3
-ARG OPENSSL_VERSION=4.0.1
+ARG NGINX_VERSION=1.31.8
+ARG OPENSSL_VERSION=4.0.3
 
-ARG CFLAGS="-flto -fmerge-all-constants -fno-unwind-tables -fuse-linker-plugin -Os -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -fstack-protector-strong -fPIE -Wno-cast-function-type -Wno-implicit-function-declaration"
-ARG LDFLAGS="-flto -fuse-linker-plugin -static-pie -s -Wl,--gc-sections -Wl,-z,relro -Wl,-z,now -Wl,--build-id=none"
+# Build-stage base, pinned by multi-arch index digest so builds are
+# reproducible. musl, zlib and PCRE2 from this image are statically linked into
+# nginx, so refresh the digest on every release, at least monthly, and promptly
+# on musl/zlib/PCRE2 advisories:
+#   docker buildx imagetools inspect alpine:edge   # use the top-level Digest
+ARG ALPINE_IMAGE=alpine:edge@sha256:020dfcbaaf4cc1078bf2d9c7ba31a8466e334061dcd2f248001d68f79e52c000
+
+ARG CFLAGS="-flto=auto -fmerge-all-constants -fno-unwind-tables -fuse-linker-plugin -Os -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables -fstack-protector-strong -fPIE -Wno-cast-function-type -Wno-implicit-function-declaration"
+ARG LDFLAGS="-flto=auto -fuse-linker-plugin -static-pie -s -Wl,--gc-sections -Wl,-z,relro -Wl,-z,now -Wl,--build-id=none"
 
 ################################################################################
 # FETCH: download/verify nginx and openssl
 ################################################################################
-FROM alpine:edge AS fetch
+FROM ${ALPINE_IMAGE} AS fetch
 
 ARG NGINX_VERSION
 ARG OPENSSL_VERSION
@@ -30,9 +37,9 @@ COPY keys/ /tmp/keys/
 # OpenSSL: pin the SHA-256 AND verify the detached PGP signature against the
 # vendored OpenSSL release key. Update OPENSSL_CHECKSUM whenever OPENSSL_VERSION
 # changes (download the signed asset, verify, then `sha256sum`). The checksum
-# below is for OpenSSL 4.0.1.
-ARG OPENSSL_CHECKSUM="2db3f3a0d6ea4b59e1f094ace2c8cd536dffb87cdc39084c5afa1e6f7f37dd09"
-ARG OPENSSL_GPG_FINGERPRINT="BA5473A2B0587B07FB27CF2D216094DFD0CB81EF"
+# below is for OpenSSL 4.0.3.
+ARG OPENSSL_CHECKSUM="325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9"
+ARG OPENSSL_GPG_FINGERPRINT="B146647E45A7B33947AB226B2A2C87D161692D40"
 RUN set -eux; \
     wget -O openssl.tar.gz "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"; \
     wget -O openssl.tar.gz.asc "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz.asc"; \
@@ -58,8 +65,8 @@ ARG NGINX_GPG_FINGERPRINTS="43387825DDB1BB97EC36BA5D007C8D7C15D87369 8540A6F1883
 # Pinned tarball SHA-256 for byte-for-byte reproducibility. MUST be updated
 # whenever NGINX_VERSION changes: download the signed release asset, verify its
 # PGP signature, then record `sha256sum nginx-<version>.tar.gz`. The value below
-# is for nginx 1.31.3. Set to "" to disable the checksum gate (not recommended).
-ARG NGINX_CHECKSUM="a7657c50811c2d92d9895395e8b873ef60398142c4db21eb647811c38f6dd525"
+# is for nginx 1.31.8. Set to "" to disable the checksum gate (not recommended).
+ARG NGINX_CHECKSUM="0652b760b3b772d2ec17b47c2fc15d9a95e6fe35cd5b877eadc1a62d9bc75af1"
 
 # nginx: download the official signed release ASSETS from the nginx GitHub
 # releases (NOT the /archive/ auto-generated tarballs, which have no .asc and
@@ -86,7 +93,7 @@ RUN set -eux; \
 ################################################################################
 # BUILD DEPS: all static, pcre2, zlib, upx (for optional)
 ################################################################################
-FROM alpine:edge AS build-deps
+FROM ${ALPINE_IMAGE} AS build-deps
 
 ARG NGINX_VERSION
 ARG OPENSSL_VERSION
@@ -242,8 +249,7 @@ RUN ./configure \
     --without-http_upstream_zone_module && \
     make -j"$(nproc)" && \
     cp objs/nginx /nginx && \
-    strip --strip-all /nginx && \
-    upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
+    strip --strip-all /nginx
 
 ################################################################################
 # BUILD NGINX Gzip (no SSL)
@@ -297,8 +303,7 @@ RUN ./configure \
     --without-http_upstream_zone_module && \
     make -j"$(nproc)" && \
     cp objs/nginx /nginx && \
-    strip --strip-all /nginx && \
-    upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
+    strip --strip-all /nginx
 
 ################################################################################
 # BUILD NGINX SSI (includes gzip)
@@ -351,8 +356,7 @@ RUN ./configure \
     --without-http_upstream_zone_module && \
     make -j"$(nproc)" && \
     cp objs/nginx /nginx && \
-    strip --strip-all /nginx && \
-    upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
+    strip --strip-all /nginx
 
 ################################################################################
 # BUILD NGINX SSL (includes gzip)
@@ -404,19 +408,35 @@ RUN ./configure \
     --without-http_upstream_ip_hash_module \
     --without-http_upstream_least_conn_module \
     --without-http_upstream_random_module \
-    --without-http_upstream_keepalive_module \
     --without-http_upstream_zone_module && \
     make -j"$(nproc)" && \
     cp objs/nginx /nginx && \
-    strip --strip-all /nginx && \
-    upx --ultra-brute /nginx -o /nginx-upx || cp /nginx /nginx-upx
+    strip --strip-all /nginx
+
+################################################################################
+# UPX: compress each binary in its own stage so the plain images never wait on
+# (or lose cache to) compression. --best --lzma is within ~0.5% of
+# --ultra-brute's size at a small fraction of its time. Platforms without UPX
+# (s390x, riscv64) fall back to the uncompressed binary.
+################################################################################
+FROM build-micro AS upx-micro
+RUN upx --best --lzma /nginx -o /nginx-upx || cp /nginx /nginx-upx
+
+FROM build-gzip AS upx-gzip
+RUN upx --best --lzma /nginx -o /nginx-upx || cp /nginx /nginx-upx
+
+FROM build-ssi AS upx-ssi
+RUN upx --best --lzma /nginx -o /nginx-upx || cp /nginx /nginx-upx
+
+FROM build-ssl AS upx-ssl
+RUN upx --best --lzma /nginx -o /nginx-upx || cp /nginx /nginx-upx
 
 ################################################################################
 # SKELETON: a writable /tmp owned by uid 101 for the unprivileged variants.
 # scratch has no shell/mkdir at runtime, so the directory must be pre-created
 # here and COPY --chown'd into the final image.
 ################################################################################
-FROM alpine:edge AS unpriv-skel
+FROM ${ALPINE_IMAGE} AS unpriv-skel
 RUN mkdir -p /skel/tmp && chown 101:101 /skel/tmp && chmod 0700 /skel/tmp
 
 ################################################################################
@@ -451,7 +471,7 @@ COPY --from=build-micro /nginx /nginx
 ################################################################################
 FROM nginx-user AS micro-upx
 
-COPY --from=build-micro /nginx-upx /nginx
+COPY --from=upx-micro /nginx-upx /nginx
 ################################################################################
 # FINAL Nginx Gzip
 ################################################################################
@@ -463,7 +483,7 @@ COPY --from=build-gzip /nginx /nginx
 ################################################################################
 FROM nginx-user AS gzip-upx
 
-COPY --from=build-gzip /nginx-upx /nginx
+COPY --from=upx-gzip /nginx-upx /nginx
 ################################################################################
 # FINAL Nginx SSI
 ################################################################################
@@ -475,7 +495,7 @@ COPY --from=build-ssi /nginx /nginx
 ################################################################################
 FROM nginx-user AS ssi-upx
 
-COPY --from=build-ssi /nginx-upx /nginx
+COPY --from=upx-ssi /nginx-upx /nginx
 ################################################################################
 # FINAL Nginx SSL
 ################################################################################
@@ -490,7 +510,7 @@ EXPOSE 443 443/udp
 ################################################################################
 FROM nginx-user AS ssl-upx
 
-COPY --from=build-ssl /nginx-upx /nginx
+COPY --from=upx-ssl /nginx-upx /nginx
 
 # 443/tcp for HTTP/1.1 + HTTP/2; 443/udp for HTTP/3 (QUIC).
 EXPOSE 443 443/udp
@@ -537,7 +557,7 @@ EXPOSE 8443 8443/udp
 ################################################################################
 FROM nginx-user-unprivileged AS ssl-unprivileged-upx
 
-COPY --from=build-ssl /nginx-upx /nginx
+COPY --from=upx-ssl /nginx-upx /nginx
 
 # 8443/tcp for HTTP/1.1 + HTTP/2; 8443/udp for HTTP/3 (QUIC).
 EXPOSE 8443 8443/udp

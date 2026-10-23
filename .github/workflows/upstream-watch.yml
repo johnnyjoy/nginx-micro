@@ -1,0 +1,110 @@
+name: Upstream release watch
+
+# Daily check for new nginx mainline / OpenSSL patch releases. Verifies any new
+# tarball against the vendored keys in keys/ and opens (or updates) an issue.
+# Builds nothing; never changes the repo.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare pinned versions with upstream
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          pinned_nginx="$(sed -n 's/^ARG NGINX_VERSION=//p' Dockerfile)"
+          pinned_openssl="$(sed -n 's/^ARG OPENSSL_VERSION=//p' Dockerfile)"
+          openssl_fpr="$(sed -n 's/^ARG OPENSSL_GPG_FINGERPRINT="\(.*\)"/\1/p' Dockerfile)"
+          nginx_fprs="$(sed -n 's/^ARG NGINX_GPG_FINGERPRINTS="\(.*\)"/\1/p' Dockerfile)"
+
+          # nginx mainline: newest entry in the official changelog.
+          latest_nginx="$(curl -fsSL https://nginx.org/en/CHANGES \
+            | sed -n 's/^Changes with nginx \([0-9.]*\).*/\1/p' | head -1)"
+
+          # OpenSSL: newest stable patch in the pinned major.minor series.
+          series="${pinned_openssl%.*}"
+          latest_openssl="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
+              'https://api.github.com/repos/openssl/openssl/releases?per_page=50' \
+            | jq -r '.[].tag_name' \
+            | sed -n "s/^openssl-\(${series//./\\.}\.[0-9]*\)$/\1/p" | sort -V | tail -1)"
+
+          # A failed lookup must not look like "up to date".
+          [ -n "$latest_nginx" ] || { echo "ERROR: could not determine latest nginx" >&2; exit 1; }
+          [ -n "$latest_openssl" ] || { echo "ERROR: could not determine latest OpenSSL ${series}.x" >&2; exit 1; }
+
+          echo "nginx:   pinned ${pinned_nginx}, latest ${latest_nginx}"
+          echo "openssl: pinned ${pinned_openssl}, latest ${latest_openssl}"
+
+          verify() { # name url fingerprints keyfiles...
+            name="$1"; url="$2"; fprs="$3"; shift 3
+            dir="$(mktemp -d)"
+            curl -fsSL -o "$dir/t.tar.gz" "$url"
+            curl -fsSL -o "$dir/t.tar.gz.asc" "$url.asc"
+            export GNUPGHOME="$(mktemp -d)"
+            gpg --batch --quiet --import "$@"
+            signer="$(gpg --batch --status-fd 1 --verify "$dir/t.tar.gz.asc" "$dir/t.tar.gz" 2>/dev/null \
+              | awk '/^\[GNUPG:\] VALIDSIG/ { print $NF }')"
+            sum="$(sha256sum "$dir/t.tar.gz" | cut -d' ' -f1)"
+            case " $fprs " in
+              *" ${signer:-none} "*) echo "- **${name}**: signature OK (\`${signer}\`), sha256 \`${sum}\`" ;;
+              *) echo "- **${name}**: ⚠️ **signature NOT from a pinned key** (signer: \`${signer:-none/unknown key}\`). Treat as a security event; see keys/README.md." ;;
+            esac
+          }
+
+          report=""
+          if [ "$latest_nginx" != "$pinned_nginx" ]; then
+            report="${report}$(verify "nginx ${latest_nginx}" \
+              "https://github.com/nginx/nginx/releases/download/release-${latest_nginx}/nginx-${latest_nginx}.tar.gz" \
+              "$nginx_fprs" keys/nginx_signing.key keys/arut.key keys/pluknet.key keys/sb.key keys/thresh.key)
+          "
+          fi
+          if [ "$latest_openssl" != "$pinned_openssl" ]; then
+            report="${report}$(verify "OpenSSL ${latest_openssl}" \
+              "https://github.com/openssl/openssl/releases/download/openssl-${latest_openssl}/openssl-${latest_openssl}.tar.gz" \
+              "$openssl_fpr" keys/openssl.key)
+          "
+          fi
+
+          if [ -z "$report" ]; then
+            echo "Up to date."
+            exit 0
+          fi
+          {
+            echo "Pinned: nginx ${pinned_nginx}, OpenSSL ${pinned_openssl}"
+            echo
+            printf '%s' "$report"
+            echo
+            echo "Update \`NGINX_VERSION\`/\`OPENSSL_VERSION\` and the matching \`*_CHECKSUM\` in the Dockerfile."
+          } > report.md
+          cat report.md
+          echo "title=Upstream update: nginx ${latest_nginx} / OpenSSL ${latest_openssl}" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update issue
+        if: steps.check.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ steps.check.outputs.title }}
+        run: |
+          set -eu
+          gh label create upstream-watch --color FBCA04 --description "New upstream release" 2>/dev/null || true
+          existing="$(gh issue list --label upstream-watch --state open --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --title "$TITLE" --body-file report.md
+          else
+            gh issue create --title "$TITLE" --label upstream-watch --body-file report.md
+          fi
+          if grep -q 'NOT from a pinned key' report.md; then exit 1; fi

@@ -16,3 +16,15 @@
 
 # 3) Drop docs/noise that live inside the allow-listed directories.
 keys/README.md
+
+# 4) AI assistant / agent tooling — never send to the builder, even if nested.
+**/.cursor
+**/.claude
+**/CLAUDE*.md
+**/memory-bank
+**/.aider*
+**/.continue
+**/.windsurf
+**/.roo
+**/.taskmaster
+**/.mcp.json
