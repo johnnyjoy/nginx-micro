@@ -50,19 +50,20 @@ Versioned tags use the NGINX release (e.g. `1.31.8`). Rolling aliases are also p
 
 ## Size comparison
 
-Compressed pull sizes from Docker Hub (measured on the **1.31.1** release; **1.31.8** is expected to be similar until remeasured after publish):
+Compressed pull sizes from Docker Hub for the **1.31.8** release (1 KB = 1,024 bytes):
 
-| Platform | Official `nginx:1.31.1` | `nginx-micro:1.31.1-upx` | `nginx-micro:1.31.1` |
+| Platform | Official `nginx:1.31.8` | `nginx-micro:1.31.8-upx` | `nginx-micro:1.31.8` |
 | -------- | :-------------------: | :----------------------: | :------------------: |
-| amd64    | 60.18 MB | **462.89 KB** | 589.77 KB |
-| arm64    | 58.56 MB | **443.15 KB** | 603.78 KB |
-| arm/v7   | 50.03 MB | **449.94 KB** | 531.84 KB |
-| 386      | 60.53 MB | **477.52 KB** | 608.38 KB |
-| ppc64le  | 64.11 MB | **498 KB** | 656.53 KB |
-| s390x    | 57.84 MB | *N/A* | 646.7 KB |
-| riscv64  | 55.1 MB | *N/A* | 601.95 KB |
+| amd64    | 60.92 MB | **469.55 KB** | 597.96 KB |
+| arm64    | 59.30 MB | **447.10 KB** | 609.22 KB |
+| arm/v7   | 50.72 MB | **455.12 KB** | 538.18 KB |
+| arm/v6   | *N/A* | **436.58 KB** | 600.03 KB |
+| 386      | 61.42 MB | **482.67 KB** | 614.01 KB |
+| ppc64le  | 65.04 MB | **505.90 KB** | 666.46 KB |
+| s390x    | 58.76 MB | *N/A* | 652.50 KB |
+| riscv64  | *N/A* | *N/A* | 609.21 KB |
 
-Compared to official `nginx:1.31.1`, the UPX image is **up to 148× smaller** on amd64 (ratio varies by platform and variant). As a secondary baseline, `nginx:1.31.1-alpine-slim` is about 4.76–5.82 MB compressed; `nginx-micro` is roughly **7–11× smaller** than alpine-slim depending on platform.
+Compared to official `nginx:1.31.8`, the UPX image is **up to 136× smaller** (arm64; 133× on amd64). As a secondary baseline, `nginx:1.31.8-alpine-slim` is about 4.80–5.87 MB compressed; `nginx-micro` is roughly **9–13× smaller** than alpine-slim depending on platform.
 
 ---
 
@@ -277,7 +278,7 @@ Issues and pull requests are welcome on [GitHub](https://github.com/johnnyjoy/ng
 
 ## Why not the official nginx image?
 
-- **Up to 148× smaller** than official `nginx:1.31.1` (UPX variant, platform-dependent; sizes from the 1.31.1 Hub snapshot).
+- **Up to 136× smaller** than official `nginx:1.31.8` (UPX variant, platform-dependent).
 - Minimal runtime: no distribution packages, no shell.
 - A good fit for CI, health checks, microservices, and edge deployments where every megabyte counts.
 
