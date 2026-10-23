@@ -1,0 +1,34 @@
+#!/bin/sh
+# Print a GitHub Actions matrix (JSON) derived from docker-bake.hcl, the single
+# source of truth for which targets build on which platforms (e.g. -upx targets
+# only on UPX_PLATFORMS).
+#
+#   ci-matrix build    one entry per platform, with a comma-separated target list
+#   ci-matrix verify   one entry per (platform, variant)
+#
+# The runner mapping is the only thing defined here: ARM platforms run on the
+# native ARM runner, everything else on x86 (QEMU where non-native).
+set -eu
+
+mode="${1:-}"
+case "$mode" in
+    build|verify) ;;
+    *) echo "usage: ci-matrix build|verify" >&2; exit 2 ;;
+esac
+
+ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+
+docker buildx bake -f "$ROOT/docker-bake.hcl" --print 2>/dev/null | jq -c --arg mode "$mode" '
+    def runner: if startswith("linux/arm") then "ubuntu-24.04-arm" else "ubuntu-latest" end;
+    def slug: gsub("/"; "-");
+    . as $b
+    | [ $b.group.default.targets[] as $t | $b.target[$t].platforms[] | {t: $t, p: .} ] as $pairs
+    | if $mode == "build" then
+        {include: ($pairs | group_by(.p) | map({
+            platform: .[0].p, runner: (.[0].p | runner), slug: (.[0].p | slug),
+            targets: (map(.t) | join(","))}))}
+      else
+        {include: ($pairs | map({
+            platform: .p, runner: (.p | runner), slug: (.p | slug),
+            variant: (.t | sub("^nginx-"; ""))}))}
+      end'
