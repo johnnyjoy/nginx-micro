@@ -104,6 +104,7 @@ jobs:
             *.platform=${{ matrix.platform }}
             *.output=type=docker
             *.cache-from=type=gha,scope=buildtest-${{ matrix.slug }}
+            *.cache-to=
 
       - name: Verify ${{ matrix.variant }} on ${{ matrix.platform }}
         run: |
