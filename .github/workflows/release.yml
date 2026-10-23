@@ -85,9 +85,14 @@ jobs:
             *.cache-to=type=registry,ref=tigersmile/nginx-micro-cache:${{ matrix.slug }},mode=max
 
       - name: Export per-target digests
+        env:
+          # Passed via env, never interpolated into the script: the metadata
+          # embeds commit messages, so any quote in one broke (or injected into)
+          # the shell.
+          METADATA: ${{ steps.bake.outputs.metadata }}
         run: |
           mkdir -p digests
-          printf '%s' '${{ steps.bake.outputs.metadata }}' > metadata.json
+          printf '%s' "$METADATA" > metadata.json
           # bake metadata is keyed by target name; keep only entries that produced
           # an image digest (ignores buildx.* informational keys).
           jq -r 'to_entries[]
